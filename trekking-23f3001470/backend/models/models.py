@@ -1,6 +1,7 @@
 from datetime import datetime, date
 from enum import Enum
 from sqlalchemy.dialects.sqlite import JSON
+from werkzeug.security import check_password_hash, generate_password_hash
 from models import db
 
 
@@ -50,6 +51,12 @@ class User(db.Model):
     bookings = db.relationship("Booking", back_populates="user", cascade="all, delete-orphan")
     assigned_treks = db.relationship("Trek", back_populates="assigned_staff")
 
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
     def __repr__(self):
         return f"<User {self.email} {self.role.value}>"
 
@@ -67,7 +74,7 @@ class Trek(db.Model):
     start_date = db.Column(db.Date)
     end_date = db.Column(db.Date)
     description = db.Column(db.Text)
-    metadata = db.Column(JSON)
+    trek_metadata = db.Column("metadata", JSON)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     bookings = db.relationship("Booking", back_populates="trek", cascade="all, delete-orphan")
     assigned_staff = db.relationship("User", back_populates="assigned_treks")

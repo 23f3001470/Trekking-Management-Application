@@ -1,6 +1,5 @@
 from werkzeug.security import generate_password_hash
 
-from app import app
 from models.models import User, RoleEnum
 from models import db
 
@@ -28,27 +27,6 @@ def seed_users():
             "role": RoleEnum.STAFF,
             "password": "Staff@123",
         },
-        {
-            "email": "rahul.verma@gmail.com",
-            "name": "Rahul Verma",
-            "phone": "9300123456",
-            "role": RoleEnum.USER,
-            "password": "Trekker@123",
-        },
-        {
-            "email": "neha.patel@gmail.com",
-            "name": "Neha Patel",
-            "phone": "9400123456",
-            "role": RoleEnum.USER,
-            "password": "Trekker@123",
-        },
-        {
-            "email": "aisha.khan@gmail.com",
-            "name": "Aisha Khan",
-            "phone": "9820012345",
-            "role": RoleEnum.USER,
-            "password": "Trekker@123",
-        },
     ]
 
     for user_data in users:
@@ -73,9 +51,9 @@ def seed_users():
             print(f"Created user: {user.email} ({user.role.value})")
 
     db.session.commit()
-    print("Seeding complete.")
-
 
 if __name__ == "__main__":
+    from app import app
+
     with app.app_context():
         seed_users()
