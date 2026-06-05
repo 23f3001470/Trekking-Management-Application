@@ -10,6 +10,13 @@ from models.models import RoleEnum, User
 bp = Blueprint("auth", __name__)
 
 
+def get_request_data():
+    """Extract data from JSON or form-data."""
+    if request.is_json:
+        return request.get_json() or {}
+    return request.form.to_dict() or {}
+
+
 def generate_auth_token(user, expires_sec=3600):
     serializer = Serializer(current_app.config["SECRET_KEY"], salt="auth-token")
     return serializer.dumps({"id": user.id})
@@ -78,7 +85,7 @@ def user_to_dict(user):
 
 @bp.route("/register", methods=["POST"])
 def register():
-    payload = request.get_json() or {}
+    payload = get_request_data()
     email = payload.get("email")
     name = payload.get("name")
     password = payload.get("password")
@@ -107,7 +114,7 @@ def register():
 
 @bp.route("/login", methods=["POST"])
 def login():
-    payload = request.get_json() or {}
+    payload = get_request_data()
     email = payload.get("email")
     password = payload.get("password")
 

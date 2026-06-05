@@ -9,6 +9,13 @@ from routes.auth_routes import roles_required, token_auth_required, user_to_dict
 bp = Blueprint("admin", __name__)
 
 
+def get_request_data():
+    """Extract data from JSON or form-data."""
+    if request.is_json:
+        return request.get_json() or {}
+    return request.form.to_dict() or {}
+
+
 def parse_date(value):
     if not value:
         return None
@@ -78,7 +85,7 @@ def list_treks():
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def create_trek():
-    payload = request.get_json() or {}
+    payload = get_request_data()
     name = payload.get("name")
     if not name:
         return jsonify({"error": "Trek name is required"}), 400
@@ -115,7 +122,7 @@ def update_trek(trek_id):
     if not trek:
         return jsonify({"error": "Trek not found"}), 404
 
-    payload = request.get_json() or {}
+    payload = get_request_data()
     if "name" in payload:
         trek.name = payload["name"]
     if "location" in payload:
@@ -158,7 +165,7 @@ def delete_trek(trek_id):
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def create_staff():
-    payload = request.get_json() or {}
+    payload = get_request_data()
     email = payload.get("email")
     name = payload.get("name")
     password = payload.get("password")
@@ -189,7 +196,7 @@ def assign_staff(trek_id):
     if not trek:
         return jsonify({"error": "Trek not found"}), 404
 
-    payload = request.get_json() or {}
+    payload = get_request_data()
     staff_id = payload.get("staff_id")
     if staff_id is None:
         return jsonify({"error": "staff_id is required"}), 400
