@@ -6,12 +6,14 @@ from models import db
 from models.models import RoleEnum, User
 from seeders.seed_users import seed_users
 from routes.auth_routes import bp as auth_bp
+from routes.admin_routes import bp as admin_bp
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///trekking.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "trek-app-secret-key")
 app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(admin_bp, url_prefix="/admin")
 
 db.init_app(app)
 
