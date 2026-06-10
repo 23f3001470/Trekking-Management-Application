@@ -8,6 +8,7 @@ from seeders.seed_users import seed_users
 from routes.auth_routes import bp as auth_bp
 from routes.admin_routes import bp as admin_bp
 from routes.staff_routes import bp as staff_bp
+from routes.user_routes import bp as user_bp
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///trekking.db"
@@ -16,6 +17,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "trek-app-secret-key")
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(staff_bp, url_prefix="/staff")
+app.register_blueprint(user_bp, url_prefix="/user")
 
 db.init_app(app)
 
