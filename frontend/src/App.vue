@@ -69,6 +69,82 @@
       </div>
     </section>
 
+    <section v-else-if="isStaffDashboard" class="admin-shell container">
+      <div class="dashboard-card">
+        <header class="dashboard-header">
+          <div>
+            <span class="eyebrow">Staff Dashboard</span>
+            <h1>Trail workbench</h1>
+            <p>See assigned treks, registered participants, and available slots without leaving the calm glass workspace.</p>
+          </div>
+
+          <button type="button" class="btn ghost-button" @click="logout()">
+            Logout
+          </button>
+        </header>
+
+        <div v-if="dashboardMessage.text" class="alert" :class="dashboardMessageClass" role="alert">
+          {{ dashboardMessage.text }}
+        </div>
+
+        <p v-if="isLoadingDashboard" class="loading-copy">Loading dashboard...</p>
+
+        <div class="stats-grid">
+          <div v-for="stat in staffStats" :key="stat.label" class="stat-card">
+            <span>{{ stat.label }}</span>
+            <strong>{{ stat.value }}</strong>
+            <small>{{ stat.caption }}</small>
+          </div>
+        </div>
+
+        <div class="dashboard-grid staff-dashboard-grid">
+          <section class="management-panel">
+            <div class="section-heading">
+              <span>Assigned</span>
+              <h2>My Treks</h2>
+            </div>
+
+            <div v-if="assignedTreks.length" class="trek-list">
+              <article v-for="trek in assignedTreks" :key="trek.id" class="trek-row">
+                <div>
+                  <span>{{ trek.location || "Location pending" }}</span>
+                  <strong>{{ trek.name }}</strong>
+                  <small>{{ trek.registered_count }} registered · {{ trek.available_slots }} slots</small>
+                </div>
+                <b>{{ trek.status || "pending" }}</b>
+              </article>
+            </div>
+
+            <div v-else class="empty-panel">
+              No treks assigned yet.
+            </div>
+          </section>
+
+          <section class="management-panel">
+            <div class="section-heading">
+              <span>Profile</span>
+              <h2>Quick View</h2>
+            </div>
+
+            <div class="quick-stack">
+              <div class="quick-row">
+                <span>Signed in as</span>
+                <strong>{{ currentUser.email }}</strong>
+              </div>
+              <div class="quick-row">
+                <span>Role</span>
+                <strong>{{ currentUser.role }}</strong>
+              </div>
+              <div class="quick-row">
+                <span>Status</span>
+                <strong>{{ currentUser.is_active ? "Active" : "Inactive" }}</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
     <section v-else class="auth-shell container">
       <div class="row align-items-center g-4 g-lg-5">
         <div class="col-lg-6">
@@ -201,6 +277,7 @@
 <script>
 import { loginUser, registerUser } from "./services/authApi";
 import { getAdminDashboard } from "./services/adminApi";
+import { getStaffDashboard } from "./services/staffApi";
 
 const emptyForm = () => ({
   name: "",
@@ -220,6 +297,7 @@ export default {
       token: localStorage.getItem("tma_token") || "",
       currentUser: JSON.parse(localStorage.getItem("tma_user") || "null"),
       dashboard: null,
+      staffDashboard: null,
       message: {
         type: "",
         text: "",
@@ -251,6 +329,12 @@ export default {
     isAdminDashboard() {
       return this.currentUser && this.currentUser.role === "admin";
     },
+    isStaffDashboard() {
+      return this.currentUser && this.currentUser.role === "staff";
+    },
+    assignedTreks() {
+      return this.staffDashboard?.assigned_treks || [];
+    },
     dashboardStats() {
       const data = this.dashboard || {};
 
@@ -277,6 +361,35 @@ export default {
         },
       ];
     },
+    staffStats() {
+      const assignedTreks = this.assignedTreks;
+      const registeredCount = assignedTreks.reduce((total, trek) => total + (trek.registered_count || 0), 0);
+      const availableSlots = assignedTreks.reduce((total, trek) => total + (trek.available_slots || 0), 0);
+      const activeTreks = assignedTreks.filter((trek) => trek.status === "Open").length;
+
+      return [
+        {
+          label: "Assigned",
+          value: assignedTreks.length,
+          caption: "Treks under you",
+        },
+        {
+          label: "Registered",
+          value: registeredCount,
+          caption: "Booked participants",
+        },
+        {
+          label: "Open",
+          value: activeTreks,
+          caption: "Currently active",
+        },
+        {
+          label: "Slots",
+          value: availableSlots,
+          caption: "Available capacity",
+        },
+      ];
+    },
     submitLabel() {
       if (this.isSubmitting) {
         return this.mode === "login" ? "Signing in..." : "Creating account...";
@@ -292,7 +405,7 @@ export default {
     },
   },
   mounted() {
-    if (this.isAdminDashboard) {
+    if (this.isAdminDashboard || this.isStaffDashboard) {
       this.loadDashboard();
     }
   },
@@ -348,14 +461,14 @@ export default {
         this.token = result.token;
         this.currentUser = result.user;
 
-        if (result.user.role === "admin") {
+        if (result.user.role === "admin" || result.user.role === "staff") {
           this.message = { type: "", text: "" };
           await this.loadDashboard();
         } else {
           this.logout(false);
           this.message = {
             type: "error",
-            text: "This screen is ready for admin access only.",
+            text: "This screen is ready for staff and admin access only.",
           };
         }
       } catch (error) {
@@ -376,7 +489,13 @@ export default {
       this.dashboardMessage = { type: "", text: "" };
 
       try {
-        this.dashboard = await getAdminDashboard(this.token);
+        if (this.isAdminDashboard) {
+          this.dashboard = await getAdminDashboard(this.token);
+        }
+
+        if (this.isStaffDashboard) {
+          this.staffDashboard = await getStaffDashboard(this.token);
+        }
       } catch (error) {
         this.dashboardMessage = {
           type: "error",
@@ -392,6 +511,7 @@ export default {
       this.token = "";
       this.currentUser = null;
       this.dashboard = null;
+      this.staffDashboard = null;
       this.dashboardMessage = { type: "", text: "" };
 
       if (clearMessage) {
@@ -803,6 +923,64 @@ body {
   word-break: break-word;
 }
 
+.staff-dashboard-grid {
+  grid-template-columns: 1.15fr 0.85fr;
+}
+
+.trek-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.trek-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(31, 95, 80, 0.14);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.44);
+}
+
+.trek-row span {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.trek-row strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--pine);
+  font-size: 1.08rem;
+}
+
+.trek-row small {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--muted);
+}
+
+.trek-row b {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(47, 127, 104, 0.12);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.empty-panel {
+  padding: 1rem;
+  border: 1px dashed rgba(31, 95, 80, 0.26);
+  border-radius: 0.5rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 @media (max-width: 991.98px) {
   .app-page {
     align-items: flex-start;
@@ -857,6 +1035,11 @@ body {
 
   .quick-row strong {
     text-align: left;
+  }
+
+  .trek-row {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>
