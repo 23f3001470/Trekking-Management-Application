@@ -1,13 +1,7 @@
 const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || "";
 
-async function request(path, payload) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+async function request(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, options);
 
   const data = await response.json().catch(() => ({}));
 
@@ -19,9 +13,21 @@ async function request(path, payload) {
 }
 
 export function loginUser(credentials) {
-  return request("/auth/login", credentials);
+  return request("/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(credentials),
+  });
 }
 
 export function registerUser(details) {
-  return request("/auth/register", details);
+  return request("/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(details),
+  });
 }

@@ -1,6 +1,75 @@
 <template>
-  <main class="auth-page">
-    <section class="auth-shell container">
+  <main class="app-page">
+    <section v-if="isAdminDashboard" class="admin-shell container">
+      <div class="dashboard-card">
+        <header class="dashboard-header">
+          <div>
+            <span class="eyebrow">Admin Dashboard</span>
+            <h1>Welcome, {{ currentUser.name }}</h1>
+            <p>Track platform activity, bookings, treks, and team capacity from one calm workspace.</p>
+          </div>
+
+          <button type="button" class="btn ghost-button" @click="logout()">
+            Logout
+          </button>
+        </header>
+
+        <div v-if="dashboardMessage.text" class="alert" :class="dashboardMessageClass" role="alert">
+          {{ dashboardMessage.text }}
+        </div>
+
+        <p v-if="isLoadingDashboard" class="loading-copy">Loading dashboard...</p>
+
+        <div class="stats-grid">
+          <div v-for="stat in dashboardStats" :key="stat.label" class="stat-card">
+            <span>{{ stat.label }}</span>
+            <strong>{{ stat.value }}</strong>
+            <small>{{ stat.caption }}</small>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="management-panel">
+            <div class="section-heading">
+              <span>Manage</span>
+              <h2>Operations</h2>
+            </div>
+
+            <div class="action-list">
+              <button v-for="action in adminActions" :key="action.title" type="button" class="action-item">
+                <span>{{ action.kicker }}</span>
+                <strong>{{ action.title }}</strong>
+                <small>{{ action.text }}</small>
+              </button>
+            </div>
+          </section>
+
+          <section class="management-panel">
+            <div class="section-heading">
+              <span>Today</span>
+              <h2>Quick View</h2>
+            </div>
+
+            <div class="quick-stack">
+              <div class="quick-row">
+                <span>Signed in as</span>
+                <strong>{{ currentUser.email }}</strong>
+              </div>
+              <div class="quick-row">
+                <span>Role</span>
+                <strong>{{ currentUser.role }}</strong>
+              </div>
+              <div class="quick-row">
+                <span>Status</span>
+                <strong>{{ currentUser.is_active ? "Active" : "Inactive" }}</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section v-else class="auth-shell container">
       <div class="row align-items-center g-4 g-lg-5">
         <div class="col-lg-6">
           <div class="brand-panel">
@@ -110,7 +179,7 @@
                 {{ message.text }}
               </div>
 
-              <button type="submit" class="btn submit-button w-100" :disabled="isSubmitting">
+              <button type="submit" class="btn primary-button w-100" :disabled="isSubmitting">
                 <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
                 {{ submitLabel }}
               </button>
@@ -131,6 +200,7 @@
 
 <script>
 import { loginUser, registerUser } from "./services/authApi";
+import { getAdminDashboard } from "./services/adminApi";
 
 const emptyForm = () => ({
   name: "",
@@ -146,13 +216,67 @@ export default {
       mode: "login",
       form: emptyForm(),
       isSubmitting: false,
+      isLoadingDashboard: false,
+      token: localStorage.getItem("tma_token") || "",
+      currentUser: JSON.parse(localStorage.getItem("tma_user") || "null"),
+      dashboard: null,
       message: {
         type: "",
         text: "",
       },
+      dashboardMessage: {
+        type: "",
+        text: "",
+      },
+      adminActions: [
+        {
+          kicker: "Treks",
+          title: "Manage treks",
+          text: "Create, update, and review trek inventory.",
+        },
+        {
+          kicker: "Staff",
+          title: "Assign teams",
+          text: "Coordinate trek staff and operational ownership.",
+        },
+        {
+          kicker: "Bookings",
+          title: "Review bookings",
+          text: "Monitor demand and booking volume.",
+        },
+      ],
     };
   },
   computed: {
+    isAdminDashboard() {
+      return this.currentUser && this.currentUser.role === "admin";
+    },
+    dashboardStats() {
+      const data = this.dashboard || {};
+
+      return [
+        {
+          label: "Treks",
+          value: data.total_treks ?? "0",
+          caption: "Listed experiences",
+        },
+        {
+          label: "Trekkers",
+          value: data.total_users ?? "0",
+          caption: "Registered users",
+        },
+        {
+          label: "Staff",
+          value: data.total_staff ?? "0",
+          caption: "Team members",
+        },
+        {
+          label: "Bookings",
+          value: data.total_bookings ?? "0",
+          caption: "Total reservations",
+        },
+      ];
+    },
     submitLabel() {
       if (this.isSubmitting) {
         return this.mode === "login" ? "Signing in..." : "Creating account...";
@@ -163,6 +287,14 @@ export default {
     messageClass() {
       return this.message.type === "success" ? "alert-success" : "alert-danger";
     },
+    dashboardMessageClass() {
+      return this.dashboardMessage.type === "success" ? "alert-success" : "alert-danger";
+    },
+  },
+  mounted() {
+    if (this.isAdminDashboard) {
+      this.loadDashboard();
+    }
   },
   methods: {
     setMode(mode) {
@@ -213,11 +345,19 @@ export default {
 
         localStorage.setItem("tma_token", result.token);
         localStorage.setItem("tma_user", JSON.stringify(result.user));
+        this.token = result.token;
+        this.currentUser = result.user;
 
-        this.message = {
-          type: "success",
-          text: `${result.message}. Logged in as ${result.user.name}.`,
-        };
+        if (result.user.role === "admin") {
+          this.message = { type: "", text: "" };
+          await this.loadDashboard();
+        } else {
+          this.logout(false);
+          this.message = {
+            type: "error",
+            text: "This screen is ready for admin access only.",
+          };
+        }
       } catch (error) {
         this.message = {
           type: "error",
@@ -225,6 +365,37 @@ export default {
         };
       } finally {
         this.isSubmitting = false;
+      }
+    },
+    async loadDashboard() {
+      if (!this.token) {
+        return;
+      }
+
+      this.isLoadingDashboard = true;
+      this.dashboardMessage = { type: "", text: "" };
+
+      try {
+        this.dashboard = await getAdminDashboard(this.token);
+      } catch (error) {
+        this.dashboardMessage = {
+          type: "error",
+          text: error.message,
+        };
+      } finally {
+        this.isLoadingDashboard = false;
+      }
+    },
+    logout(clearMessage = true) {
+      localStorage.removeItem("tma_token");
+      localStorage.removeItem("tma_user");
+      this.token = "";
+      this.currentUser = null;
+      this.dashboard = null;
+      this.dashboardMessage = { type: "", text: "" };
+
+      if (clearMessage) {
+        this.message = { type: "", text: "" };
       }
     },
   },
@@ -256,7 +427,7 @@ body {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.auth-page {
+.app-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -265,7 +436,7 @@ body {
   position: relative;
 }
 
-.auth-page::before {
+.app-page::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -276,7 +447,8 @@ body {
   z-index: 0;
 }
 
-.auth-shell {
+.auth-shell,
+.admin-shell {
   position: relative;
   z-index: 1;
 }
@@ -418,7 +590,7 @@ body {
   box-shadow: 0 0 0 0.22rem rgba(47, 127, 104, 0.16);
 }
 
-.submit-button {
+.primary-button {
   min-height: 3.15rem;
   border: 0;
   border-radius: 0.5rem;
@@ -428,13 +600,13 @@ body {
   box-shadow: 0 1rem 1.8rem rgba(22, 63, 52, 0.24);
 }
 
-.submit-button:hover,
-.submit-button:focus {
+.primary-button:hover,
+.primary-button:focus {
   color: #fff;
   background: linear-gradient(135deg, #0e332b, #236e5b);
 }
 
-.submit-button:disabled {
+.primary-button:disabled {
   opacity: 0.72;
 }
 
@@ -457,8 +629,182 @@ body {
   font-weight: 600;
 }
 
+.loading-copy {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.dashboard-card {
+  padding: 1.25rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 0.75rem;
+  background: var(--mist);
+  box-shadow: 0 1.4rem 4rem rgba(25, 56, 49, 0.18);
+  backdrop-filter: blur(24px);
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 1.35rem;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  color: var(--pine);
+  font-size: 3.25rem;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.dashboard-header p {
+  max-width: 40rem;
+  margin: 0.8rem 0 0;
+  color: #314d45;
+  line-height: 1.7;
+}
+
+.ghost-button {
+  min-height: 2.75rem;
+  padding: 0 1.1rem;
+  border: 1px solid rgba(31, 95, 80, 0.18);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.54);
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.ghost-button:hover,
+.ghost-button:focus {
+  border-color: rgba(31, 95, 80, 0.32);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--pine);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.stat-card,
+.management-panel,
+.action-item {
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 1rem 2.2rem rgba(21, 55, 48, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.stat-card {
+  min-height: 8.5rem;
+  padding: 1.15rem;
+}
+
+.stat-card span,
+.section-heading span,
+.action-item span,
+.quick-row span {
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stat-card strong {
+  display: block;
+  margin-top: 0.45rem;
+  color: var(--pine);
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.stat-card small,
+.action-item small {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 0.85fr;
+  gap: 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.management-panel {
+  padding: 1.15rem;
+}
+
+.section-heading {
+  margin-bottom: 1rem;
+}
+
+.section-heading h2 {
+  margin: 0.2rem 0 0;
+  color: var(--pine);
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.action-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.action-item {
+  min-height: 9rem;
+  padding: 1rem;
+  text-align: left;
+  color: var(--pine);
+  transition: 160ms ease;
+}
+
+.action-item strong {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 1.05rem;
+}
+
+.action-item:hover,
+.action-item:focus {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.quick-stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.quick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid rgba(31, 95, 80, 0.14);
+}
+
+.quick-row:last-child {
+  border-bottom: 0;
+}
+
+.quick-row strong {
+  color: var(--pine);
+  text-align: right;
+  word-break: break-word;
+}
+
 @media (max-width: 991.98px) {
-  .auth-page {
+  .app-page {
     align-items: flex-start;
     padding: 2rem 0;
   }
@@ -474,11 +820,43 @@ body {
   .brand-panel h1 {
     font-size: 3.4rem;
   }
+
+  .dashboard-header {
+    flex-direction: column;
+  }
+
+  .dashboard-header h1 {
+    font-size: 2.6rem;
+  }
+
+  .stats-grid,
+  .dashboard-grid,
+  .action-list {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 575.98px) {
   .brand-panel h1 {
     font-size: 2.65rem;
+  }
+
+  .dashboard-card {
+    padding: 1rem;
+  }
+
+  .dashboard-header h1 {
+    font-size: 2rem;
+  }
+
+  .quick-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .quick-row strong {
+    text-align: left;
   }
 }
 </style>

@@ -14,3 +14,4 @@ progress.md
 *.sqlite
 *.log
 API.md 
+venv/
