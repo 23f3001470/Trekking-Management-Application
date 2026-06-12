@@ -1,656 +1,6 @@
 <template>
-  <main class="app-page">
-    <section v-if="isAdminDashboard" class="admin-shell container">
-      <div class="dashboard-card">
-        <header class="dashboard-header">
-          <div>
-            <span class="eyebrow">Admin Dashboard</span>
-            <h1>Welcome, {{ currentUser.name }}</h1>
-            <p>Track platform activity, bookings, treks, and team capacity from one calm workspace.</p>
-          </div>
-
-          <button type="button" class="btn ghost-button" @click="logout()">
-            Logout
-          </button>
-        </header>
-
-        <div v-if="dashboardMessage.text" class="alert" :class="dashboardMessageClass" role="alert">
-          {{ dashboardMessage.text }}
-        </div>
-
-        <p v-if="isLoadingDashboard" class="loading-copy">Loading dashboard...</p>
-
-        <div class="stats-grid">
-          <div v-for="stat in dashboardStats" :key="stat.label" class="stat-card">
-            <span>{{ stat.label }}</span>
-            <strong>{{ stat.value }}</strong>
-            <small>{{ stat.caption }}</small>
-          </div>
-        </div>
-
-        <div class="dashboard-grid">
-          <section class="management-panel">
-            <div class="section-heading">
-              <span>Manage</span>
-              <h2>Operations</h2>
-            </div>
-
-            <div class="action-list">
-              <button v-for="action in adminActions" :key="action.title" type="button" class="action-item">
-                <span>{{ action.kicker }}</span>
-                <strong>{{ action.title }}</strong>
-                <small>{{ action.text }}</small>
-              </button>
-            </div>
-          </section>
-
-          <section class="management-panel">
-            <div class="section-heading">
-              <span>Today</span>
-              <h2>Quick View</h2>
-            </div>
-
-            <div class="quick-stack">
-              <div class="quick-row">
-                <span>Signed in as</span>
-                <strong>{{ currentUser.email }}</strong>
-              </div>
-              <div class="quick-row">
-                <span>Role</span>
-                <strong>{{ currentUser.role }}</strong>
-              </div>
-              <div class="quick-row">
-                <span>Status</span>
-                <strong>{{ currentUser.is_active ? "Active" : "Inactive" }}</strong>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </section>
-
-    <section v-else-if="isStaffDashboard" class="admin-shell container">
-      <div class="dashboard-card">
-        <header class="dashboard-header">
-          <div>
-            <span class="eyebrow">Staff Dashboard</span>
-            <h1>Trail workbench</h1>
-            <p>See assigned treks, registered participants, and available slots without leaving the calm glass workspace.</p>
-          </div>
-
-          <button type="button" class="btn ghost-button" @click="logout()">
-            Logout
-          </button>
-        </header>
-
-        <div v-if="dashboardMessage.text" class="alert" :class="dashboardMessageClass" role="alert">
-          {{ dashboardMessage.text }}
-        </div>
-
-        <p v-if="isLoadingDashboard" class="loading-copy">Loading dashboard...</p>
-
-        <div class="stats-grid">
-          <div v-for="stat in staffStats" :key="stat.label" class="stat-card">
-            <span>{{ stat.label }}</span>
-            <strong>{{ stat.value }}</strong>
-            <small>{{ stat.caption }}</small>
-          </div>
-        </div>
-
-        <div class="dashboard-grid staff-dashboard-grid">
-          <section class="management-panel">
-            <div class="section-heading">
-              <span>Assigned</span>
-              <h2>My Treks</h2>
-            </div>
-
-            <div v-if="assignedTreks.length" class="trek-list">
-              <article v-for="trek in assignedTreks" :key="trek.id" class="trek-row">
-                <div>
-                  <span>{{ trek.location || "Location pending" }}</span>
-                  <strong>{{ trek.name }}</strong>
-                  <small>{{ trek.registered_count }} registered · {{ trek.available_slots }} slots</small>
-                </div>
-                <b>{{ trek.status || "pending" }}</b>
-              </article>
-            </div>
-
-            <div v-else class="empty-panel">
-              No treks assigned yet.
-            </div>
-          </section>
-
-          <section class="management-panel">
-            <div class="section-heading">
-              <span>Profile</span>
-              <h2>Quick View</h2>
-            </div>
-
-            <div class="quick-stack">
-              <div class="quick-row">
-                <span>Signed in as</span>
-                <strong>{{ currentUser.email }}</strong>
-              </div>
-              <div class="quick-row">
-                <span>Role</span>
-                <strong>{{ currentUser.role }}</strong>
-              </div>
-              <div class="quick-row">
-                <span>Status</span>
-                <strong>{{ currentUser.is_active ? "Active" : "Inactive" }}</strong>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </section>
-
-    <section v-else-if="isUserDashboard" class="admin-shell container">
-      <div class="dashboard-card">
-        <header class="dashboard-header">
-          <div>
-            <span class="eyebrow">User Dashboard</span>
-            <h1>Your trek space</h1>
-            <p>Review bookings, upcoming plans, and account details in the same clean glass workspace.</p>
-          </div>
-
-          <button type="button" class="btn ghost-button" @click="logout()">
-            Logout
-          </button>
-        </header>
-
-        <div v-if="dashboardMessage.text" class="alert" :class="dashboardMessageClass" role="alert">
-          {{ dashboardMessage.text }}
-        </div>
-
-        <p v-if="isLoadingDashboard" class="loading-copy">Loading dashboard...</p>
-
-        <div class="stats-grid">
-          <div v-for="stat in userStats" :key="stat.label" class="stat-card">
-            <span>{{ stat.label }}</span>
-            <strong>{{ stat.value }}</strong>
-            <small>{{ stat.caption }}</small>
-          </div>
-        </div>
-
-        <div class="dashboard-grid user-dashboard-grid">
-          <section class="management-panel">
-            <div class="section-heading">
-              <span>Bookings</span>
-              <h2>My Treks</h2>
-            </div>
-
-            <div v-if="userBookings.length" class="trek-list">
-              <article v-for="booking in userBookings" :key="booking.id || booking.booking_id" class="trek-row">
-                <div>
-                  <span>{{ booking.trek?.location || booking.location || "Location pending" }}</span>
-                  <strong>{{ booking.trek?.name || booking.name || "Trek booking" }}</strong>
-                  <small>{{ booking.booking_date || "Date pending" }} · {{ booking.payment_status || "payment pending" }}</small>
-                </div>
-                <b>{{ booking.status || "pending" }}</b>
-              </article>
-            </div>
-
-            <div v-else class="empty-panel">
-              No bookings yet.
-            </div>
-          </section>
-
-          <section class="management-panel">
-            <div class="section-heading">
-              <span>Profile</span>
-              <h2>Quick View</h2>
-            </div>
-
-            <div class="quick-stack">
-              <div class="quick-row">
-                <span>Signed in as</span>
-                <strong>{{ currentUser.email }}</strong>
-              </div>
-              <div class="quick-row">
-                <span>Phone</span>
-                <strong>{{ currentUser.phone || "Not added" }}</strong>
-              </div>
-              <div class="quick-row">
-                <span>Status</span>
-                <strong>{{ currentUser.is_active ? "Active" : "Inactive" }}</strong>
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </section>
-
-    <section v-else class="auth-shell container">
-      <div class="row align-items-center g-4 g-lg-5">
-        <div class="col-lg-6">
-          <div class="brand-panel">
-            <span class="eyebrow">Trekking Management Application</span>
-            <h1>Plan cleanly. Trek freely.</h1>
-            <p>
-              A focused entry point for trekkers, staff, and admins to access
-              the platform. Start with login or create a trekker account.
-            </p>
-
-            <div class="feature-grid">
-              <div class="feature-pill">
-                <span>01</span>
-                Role based access
-              </div>
-              <div class="feature-pill">
-                <span>02</span>
-                Booking readiness
-              </div>
-              <div class="feature-pill">
-                <span>03</span>
-                Trek staff workflow
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-lg-6">
-          <div class="auth-card">
-            <div class="mode-toggle" role="tablist" aria-label="Authentication mode">
-              <button
-                type="button"
-                class="mode-button"
-                :class="{ active: mode === 'login' }"
-                @click="setMode('login')"
-              >
-                Login
-              </button>
-              <button
-                type="button"
-                class="mode-button"
-                :class="{ active: mode === 'register' }"
-                @click="setMode('register')"
-              >
-                Register
-              </button>
-            </div>
-
-            <div class="card-heading">
-              <span>{{ mode === "login" ? "Welcome back" : "Create trekker account" }}</span>
-              <h2>{{ mode === "login" ? "Sign in to continue" : "Join the trail" }}</h2>
-            </div>
-
-            <form @submit.prevent="submitForm" novalidate>
-              <div v-if="mode === 'register'" class="mb-3">
-                <label for="name" class="form-label">Full name</label>
-                <input
-                  id="name"
-                  v-model.trim="form.name"
-                  type="text"
-                  class="form-control glass-input"
-                  placeholder="Aarav Sharma"
-                  autocomplete="name"
-                  required
-                >
-              </div>
-
-              <div class="mb-3">
-                <label for="email" class="form-label">Email address</label>
-                <input
-                  id="email"
-                  v-model.trim="form.email"
-                  type="email"
-                  class="form-control glass-input"
-                  placeholder="you@example.com"
-                  autocomplete="email"
-                  required
-                >
-              </div>
-
-              <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input
-                  id="password"
-                  v-model="form.password"
-                  type="password"
-                  class="form-control glass-input"
-                  placeholder="Enter your password"
-                  :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
-                  required
-                >
-              </div>
-
-              <div v-if="mode === 'register'" class="mb-4">
-                <label for="phone" class="form-label">Phone number</label>
-                <input
-                  id="phone"
-                  v-model.trim="form.phone"
-                  type="tel"
-                  class="form-control glass-input"
-                  placeholder="+91 98765 43210"
-                  autocomplete="tel"
-                >
-              </div>
-
-              <div v-if="message.text" class="alert" :class="messageClass" role="alert">
-                {{ message.text }}
-              </div>
-
-              <button type="submit" class="btn primary-button w-100" :disabled="isSubmitting">
-                <span v-if="isSubmitting" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-                {{ submitLabel }}
-              </button>
-            </form>
-
-            <p class="helper-copy">
-              {{ mode === "login" ? "New trekker?" : "Already registered?" }}
-              <button type="button" class="link-button" @click="toggleMode">
-                {{ mode === "login" ? "Create an account" : "Login instead" }}
-              </button>
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
+  <router-view />
 </template>
-
-<script>
-import { loginUser, registerUser } from "./services/authApi";
-import { getAdminDashboard } from "./services/adminApi";
-import { getStaffDashboard } from "./services/staffApi";
-import { getUserDashboard } from "./services/userApi";
-
-const emptyForm = () => ({
-  name: "",
-  email: "",
-  password: "",
-  phone: "",
-});
-
-export default {
-  name: "App",
-  data() {
-    return {
-      mode: "login",
-      form: emptyForm(),
-      isSubmitting: false,
-      isLoadingDashboard: false,
-      token: localStorage.getItem("tma_token") || "",
-      currentUser: JSON.parse(localStorage.getItem("tma_user") || "null"),
-      dashboard: null,
-      staffDashboard: null,
-      userDashboard: null,
-      message: {
-        type: "",
-        text: "",
-      },
-      dashboardMessage: {
-        type: "",
-        text: "",
-      },
-      adminActions: [
-        {
-          kicker: "Treks",
-          title: "Manage treks",
-          text: "Create, update, and review trek inventory.",
-        },
-        {
-          kicker: "Staff",
-          title: "Assign teams",
-          text: "Coordinate trek staff and operational ownership.",
-        },
-        {
-          kicker: "Bookings",
-          title: "Review bookings",
-          text: "Monitor demand and booking volume.",
-        },
-      ],
-    };
-  },
-  computed: {
-    isAdminDashboard() {
-      return this.currentUser && this.currentUser.role === "admin";
-    },
-    isStaffDashboard() {
-      return this.currentUser && this.currentUser.role === "staff";
-    },
-    isUserDashboard() {
-      return this.currentUser && this.currentUser.role === "user";
-    },
-    assignedTreks() {
-      return this.staffDashboard?.assigned_treks || [];
-    },
-    userBookings() {
-      return (
-        this.userDashboard?.bookings ||
-        this.userDashboard?.my_bookings ||
-        this.userDashboard?.upcoming_bookings ||
-        this.userDashboard?.upcoming ||
-        []
-      );
-    },
-    dashboardStats() {
-      const data = this.dashboard || {};
-
-      return [
-        {
-          label: "Treks",
-          value: data.total_treks ?? "0",
-          caption: "Listed experiences",
-        },
-        {
-          label: "Trekkers",
-          value: data.total_users ?? "0",
-          caption: "Registered users",
-        },
-        {
-          label: "Staff",
-          value: data.total_staff ?? "0",
-          caption: "Team members",
-        },
-        {
-          label: "Bookings",
-          value: data.total_bookings ?? "0",
-          caption: "Total reservations",
-        },
-      ];
-    },
-    staffStats() {
-      const assignedTreks = this.assignedTreks;
-      const registeredCount = assignedTreks.reduce((total, trek) => total + (trek.registered_count || 0), 0);
-      const availableSlots = assignedTreks.reduce((total, trek) => total + (trek.available_slots || 0), 0);
-      const activeTreks = assignedTreks.filter((trek) => trek.status === "Open").length;
-
-      return [
-        {
-          label: "Assigned",
-          value: assignedTreks.length,
-          caption: "Treks under you",
-        },
-        {
-          label: "Registered",
-          value: registeredCount,
-          caption: "Booked participants",
-        },
-        {
-          label: "Open",
-          value: activeTreks,
-          caption: "Currently active",
-        },
-        {
-          label: "Slots",
-          value: availableSlots,
-          caption: "Available capacity",
-        },
-      ];
-    },
-    userStats() {
-      const bookings = this.userBookings;
-      const upcomingCount =
-        this.userDashboard?.upcoming_count ??
-        this.userDashboard?.upcoming_bookings?.length ??
-        bookings.filter((booking) => booking.status !== "Completed" && booking.status !== "Cancelled").length;
-      const completedCount =
-        this.userDashboard?.completed_count ??
-        this.userDashboard?.past_bookings?.length ??
-        bookings.filter((booking) => booking.status === "Completed").length;
-      const paidCount = bookings.filter((booking) => booking.payment_status === "Paid").length;
-
-      return [
-        {
-          label: "Bookings",
-          value: bookings.length,
-          caption: "Total reservations",
-        },
-        {
-          label: "Upcoming",
-          value: upcomingCount,
-          caption: "Treks ahead",
-        },
-        {
-          label: "Completed",
-          value: completedCount,
-          caption: "Finished treks",
-        },
-        {
-          label: "Paid",
-          value: paidCount,
-          caption: "Confirmed payments",
-        },
-      ];
-    },
-    submitLabel() {
-      if (this.isSubmitting) {
-        return this.mode === "login" ? "Signing in..." : "Creating account...";
-      }
-
-      return this.mode === "login" ? "Login" : "Register";
-    },
-    messageClass() {
-      return this.message.type === "success" ? "alert-success" : "alert-danger";
-    },
-    dashboardMessageClass() {
-      return this.dashboardMessage.type === "success" ? "alert-success" : "alert-danger";
-    },
-  },
-  mounted() {
-    if (this.isAdminDashboard || this.isStaffDashboard || this.isUserDashboard) {
-      this.loadDashboard();
-    }
-  },
-  methods: {
-    setMode(mode) {
-      this.mode = mode;
-      this.form = emptyForm();
-      this.message = { type: "", text: "" };
-    },
-    toggleMode() {
-      this.setMode(this.mode === "login" ? "register" : "login");
-    },
-    validateForm() {
-      if (!this.form.email || !this.form.password) {
-        return "Email and password are required.";
-      }
-
-      if (this.mode === "register" && !this.form.name) {
-        return "Full name is required for registration.";
-      }
-
-      return "";
-    },
-    async submitForm() {
-      const validationError = this.validateForm();
-
-      if (validationError) {
-        this.message = { type: "error", text: validationError };
-        return;
-      }
-
-      this.isSubmitting = true;
-      this.message = { type: "", text: "" };
-
-      try {
-        const payload =
-          this.mode === "login"
-            ? {
-                email: this.form.email,
-                password: this.form.password,
-              }
-            : {
-                name: this.form.name,
-                email: this.form.email,
-                password: this.form.password,
-                phone: this.form.phone,
-              };
-
-        const result = this.mode === "login" ? await loginUser(payload) : await registerUser(payload);
-
-        localStorage.setItem("tma_token", result.token);
-        localStorage.setItem("tma_user", JSON.stringify(result.user));
-        this.token = result.token;
-        this.currentUser = result.user;
-
-        if (result.user.role === "admin" || result.user.role === "staff" || result.user.role === "user") {
-          this.message = { type: "", text: "" };
-          await this.loadDashboard();
-        } else {
-          this.logout(false);
-          this.message = {
-            type: "error",
-            text: "This screen is ready for registered users, staff, and admins.",
-          };
-        }
-      } catch (error) {
-        this.message = {
-          type: "error",
-          text: error.message,
-        };
-      } finally {
-        this.isSubmitting = false;
-      }
-    },
-    async loadDashboard() {
-      if (!this.token) {
-        return;
-      }
-
-      this.isLoadingDashboard = true;
-      this.dashboardMessage = { type: "", text: "" };
-
-      try {
-        if (this.isAdminDashboard) {
-          this.dashboard = await getAdminDashboard(this.token);
-        }
-
-        if (this.isStaffDashboard) {
-          this.staffDashboard = await getStaffDashboard(this.token);
-        }
-
-        if (this.isUserDashboard) {
-          this.userDashboard = await getUserDashboard(this.token);
-        }
-      } catch (error) {
-        this.dashboardMessage = {
-          type: "error",
-          text: error.message,
-        };
-      } finally {
-        this.isLoadingDashboard = false;
-      }
-    },
-    logout(clearMessage = true) {
-      localStorage.removeItem("tma_token");
-      localStorage.removeItem("tma_user");
-      this.token = "";
-      this.currentUser = null;
-      this.dashboard = null;
-      this.staffDashboard = null;
-      this.userDashboard = null;
-      this.dashboardMessage = { type: "", text: "" };
-
-      if (clearMessage) {
-        this.message = { type: "", text: "" };
-      }
-    },
-  },
-};
-</script>
 
 <style>
 :root {
@@ -698,7 +48,7 @@ body {
 }
 
 .auth-shell,
-.admin-shell {
+.dashboard-shell {
   position: relative;
   z-index: 1;
 }
@@ -730,49 +80,23 @@ body {
   font-weight: 800;
 }
 
-.brand-panel p {
-  max-width: 33rem;
-  margin: 1.35rem 0 0;
-  color: #314d45;
-  font-size: 1.05rem;
-  line-height: 1.8;
-}
-
-.feature-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.85rem;
-  margin-top: 2rem;
-}
-
-.feature-pill {
-  min-height: 6rem;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.52);
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.42);
-  box-shadow: 0 1rem 2.2rem rgba(21, 55, 48, 0.1);
-  backdrop-filter: blur(16px);
-  color: var(--pine);
-  font-weight: 700;
-}
-
-.feature-pill span {
-  display: block;
-  margin-bottom: 0.55rem;
-  color: var(--accent);
-  font-size: 0.8rem;
+.auth-card,
+.dashboard-card {
+  border: 1px solid var(--glass-border);
+  border-radius: 0.75rem;
+  background: var(--mist);
+  box-shadow: 0 1.4rem 4rem rgba(25, 56, 49, 0.18);
+  backdrop-filter: blur(24px);
 }
 
 .auth-card {
   width: min(100%, 30rem);
   margin-left: auto;
   padding: 1.25rem;
-  border: 1px solid var(--glass-border);
-  border-radius: 0.75rem;
-  background: var(--mist);
-  box-shadow: 0 1.4rem 4rem rgba(25, 56, 49, 0.18);
-  backdrop-filter: blur(24px);
+}
+
+.dashboard-card {
+  padding: 1.25rem;
 }
 
 .mode-toggle {
@@ -801,22 +125,40 @@ body {
   box-shadow: 0 0.75rem 1.4rem rgba(13, 43, 39, 0.22);
 }
 
-.card-heading {
-  margin: 1.6rem 0 1.35rem;
+.card-heading,
+.section-heading {
+  margin-bottom: 1.35rem;
 }
 
-.card-heading span {
+.card-heading {
+  margin-top: 1.6rem;
+}
+
+.card-heading span,
+.section-heading span,
+.stat-card span,
+.action-item span,
+.quick-row span,
+.trek-row span {
   color: var(--accent-strong);
-  font-size: 0.86rem;
+  font-size: 0.78rem;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-.card-heading h2 {
+.card-heading h2,
+.section-heading h2 {
   margin: 0.35rem 0 0;
   color: var(--pine);
-  font-size: 1.85rem;
   font-weight: 800;
+}
+
+.card-heading h2 {
+  font-size: 1.85rem;
+}
+
+.section-heading h2 {
+  font-size: 1.45rem;
 }
 
 .form-label {
@@ -885,15 +227,6 @@ body {
   font-weight: 700;
 }
 
-.dashboard-card {
-  padding: 1.25rem;
-  border: 1px solid var(--glass-border);
-  border-radius: 0.75rem;
-  background: var(--mist);
-  box-shadow: 0 1.4rem 4rem rgba(25, 56, 49, 0.18);
-  backdrop-filter: blur(24px);
-}
-
 .dashboard-header {
   display: flex;
   align-items: flex-start;
@@ -955,16 +288,6 @@ body {
   padding: 1.15rem;
 }
 
-.stat-card span,
-.section-heading span,
-.action-item span,
-.quick-row span {
-  color: var(--accent-strong);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
 .stat-card strong {
   display: block;
   margin-top: 0.45rem;
@@ -974,7 +297,8 @@ body {
 }
 
 .stat-card small,
-.action-item small {
+.action-item small,
+.trek-row small {
   display: block;
   margin-top: 0.75rem;
   color: var(--muted);
@@ -983,7 +307,7 @@ body {
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1.35fr 0.85fr;
+  grid-template-columns: 1.15fr 0.85fr;
   gap: 0.85rem;
   margin-top: 0.85rem;
 }
@@ -992,21 +316,15 @@ body {
   padding: 1.15rem;
 }
 
-.section-heading {
-  margin-bottom: 1rem;
-}
-
-.section-heading h2 {
-  margin: 0.2rem 0 0;
-  color: var(--pine);
-  font-size: 1.45rem;
-  font-weight: 800;
+.action-list,
+.trek-list,
+.quick-stack {
+  display: grid;
+  gap: 0.85rem;
 }
 
 .action-list {
-  display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.85rem;
 }
 
 .action-item {
@@ -1029,11 +347,6 @@ body {
   background: rgba(255, 255, 255, 0.62);
 }
 
-.quick-stack {
-  display: grid;
-  gap: 0.8rem;
-}
-
 .quick-row {
   display: flex;
   align-items: center;
@@ -1053,16 +366,6 @@ body {
   word-break: break-word;
 }
 
-.staff-dashboard-grid,
-.user-dashboard-grid {
-  grid-template-columns: 1.15fr 0.85fr;
-}
-
-.trek-list {
-  display: grid;
-  gap: 0.75rem;
-}
-
 .trek-row {
   display: flex;
   align-items: center;
@@ -1074,24 +377,11 @@ body {
   background: rgba(255, 255, 255, 0.44);
 }
 
-.trek-row span {
-  color: var(--accent-strong);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
 .trek-row strong {
   display: block;
   margin-top: 0.25rem;
   color: var(--pine);
   font-size: 1.08rem;
-}
-
-.trek-row small {
-  display: block;
-  margin-top: 0.35rem;
-  color: var(--muted);
 }
 
 .trek-row b {
@@ -1120,10 +410,6 @@ body {
 
   .auth-card {
     margin: 0;
-  }
-
-  .feature-grid {
-    grid-template-columns: 1fr;
   }
 
   .brand-panel h1 {
@@ -1158,7 +444,8 @@ body {
     font-size: 2rem;
   }
 
-  .quick-row {
+  .quick-row,
+  .trek-row {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.25rem;
@@ -1166,11 +453,6 @@ body {
 
   .quick-row strong {
     text-align: left;
-  }
-
-  .trek-row {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
 </style>
