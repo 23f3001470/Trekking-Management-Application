@@ -145,6 +145,82 @@
       </div>
     </section>
 
+    <section v-else-if="isUserDashboard" class="admin-shell container">
+      <div class="dashboard-card">
+        <header class="dashboard-header">
+          <div>
+            <span class="eyebrow">User Dashboard</span>
+            <h1>Your trek space</h1>
+            <p>Review bookings, upcoming plans, and account details in the same clean glass workspace.</p>
+          </div>
+
+          <button type="button" class="btn ghost-button" @click="logout()">
+            Logout
+          </button>
+        </header>
+
+        <div v-if="dashboardMessage.text" class="alert" :class="dashboardMessageClass" role="alert">
+          {{ dashboardMessage.text }}
+        </div>
+
+        <p v-if="isLoadingDashboard" class="loading-copy">Loading dashboard...</p>
+
+        <div class="stats-grid">
+          <div v-for="stat in userStats" :key="stat.label" class="stat-card">
+            <span>{{ stat.label }}</span>
+            <strong>{{ stat.value }}</strong>
+            <small>{{ stat.caption }}</small>
+          </div>
+        </div>
+
+        <div class="dashboard-grid user-dashboard-grid">
+          <section class="management-panel">
+            <div class="section-heading">
+              <span>Bookings</span>
+              <h2>My Treks</h2>
+            </div>
+
+            <div v-if="userBookings.length" class="trek-list">
+              <article v-for="booking in userBookings" :key="booking.id || booking.booking_id" class="trek-row">
+                <div>
+                  <span>{{ booking.trek?.location || booking.location || "Location pending" }}</span>
+                  <strong>{{ booking.trek?.name || booking.name || "Trek booking" }}</strong>
+                  <small>{{ booking.booking_date || "Date pending" }} · {{ booking.payment_status || "payment pending" }}</small>
+                </div>
+                <b>{{ booking.status || "pending" }}</b>
+              </article>
+            </div>
+
+            <div v-else class="empty-panel">
+              No bookings yet.
+            </div>
+          </section>
+
+          <section class="management-panel">
+            <div class="section-heading">
+              <span>Profile</span>
+              <h2>Quick View</h2>
+            </div>
+
+            <div class="quick-stack">
+              <div class="quick-row">
+                <span>Signed in as</span>
+                <strong>{{ currentUser.email }}</strong>
+              </div>
+              <div class="quick-row">
+                <span>Phone</span>
+                <strong>{{ currentUser.phone || "Not added" }}</strong>
+              </div>
+              <div class="quick-row">
+                <span>Status</span>
+                <strong>{{ currentUser.is_active ? "Active" : "Inactive" }}</strong>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
     <section v-else class="auth-shell container">
       <div class="row align-items-center g-4 g-lg-5">
         <div class="col-lg-6">
@@ -278,6 +354,7 @@
 import { loginUser, registerUser } from "./services/authApi";
 import { getAdminDashboard } from "./services/adminApi";
 import { getStaffDashboard } from "./services/staffApi";
+import { getUserDashboard } from "./services/userApi";
 
 const emptyForm = () => ({
   name: "",
@@ -298,6 +375,7 @@ export default {
       currentUser: JSON.parse(localStorage.getItem("tma_user") || "null"),
       dashboard: null,
       staffDashboard: null,
+      userDashboard: null,
       message: {
         type: "",
         text: "",
@@ -332,8 +410,20 @@ export default {
     isStaffDashboard() {
       return this.currentUser && this.currentUser.role === "staff";
     },
+    isUserDashboard() {
+      return this.currentUser && this.currentUser.role === "user";
+    },
     assignedTreks() {
       return this.staffDashboard?.assigned_treks || [];
+    },
+    userBookings() {
+      return (
+        this.userDashboard?.bookings ||
+        this.userDashboard?.my_bookings ||
+        this.userDashboard?.upcoming_bookings ||
+        this.userDashboard?.upcoming ||
+        []
+      );
     },
     dashboardStats() {
       const data = this.dashboard || {};
@@ -390,6 +480,41 @@ export default {
         },
       ];
     },
+    userStats() {
+      const bookings = this.userBookings;
+      const upcomingCount =
+        this.userDashboard?.upcoming_count ??
+        this.userDashboard?.upcoming_bookings?.length ??
+        bookings.filter((booking) => booking.status !== "Completed" && booking.status !== "Cancelled").length;
+      const completedCount =
+        this.userDashboard?.completed_count ??
+        this.userDashboard?.past_bookings?.length ??
+        bookings.filter((booking) => booking.status === "Completed").length;
+      const paidCount = bookings.filter((booking) => booking.payment_status === "Paid").length;
+
+      return [
+        {
+          label: "Bookings",
+          value: bookings.length,
+          caption: "Total reservations",
+        },
+        {
+          label: "Upcoming",
+          value: upcomingCount,
+          caption: "Treks ahead",
+        },
+        {
+          label: "Completed",
+          value: completedCount,
+          caption: "Finished treks",
+        },
+        {
+          label: "Paid",
+          value: paidCount,
+          caption: "Confirmed payments",
+        },
+      ];
+    },
     submitLabel() {
       if (this.isSubmitting) {
         return this.mode === "login" ? "Signing in..." : "Creating account...";
@@ -405,7 +530,7 @@ export default {
     },
   },
   mounted() {
-    if (this.isAdminDashboard || this.isStaffDashboard) {
+    if (this.isAdminDashboard || this.isStaffDashboard || this.isUserDashboard) {
       this.loadDashboard();
     }
   },
@@ -461,14 +586,14 @@ export default {
         this.token = result.token;
         this.currentUser = result.user;
 
-        if (result.user.role === "admin" || result.user.role === "staff") {
+        if (result.user.role === "admin" || result.user.role === "staff" || result.user.role === "user") {
           this.message = { type: "", text: "" };
           await this.loadDashboard();
         } else {
           this.logout(false);
           this.message = {
             type: "error",
-            text: "This screen is ready for staff and admin access only.",
+            text: "This screen is ready for registered users, staff, and admins.",
           };
         }
       } catch (error) {
@@ -496,6 +621,10 @@ export default {
         if (this.isStaffDashboard) {
           this.staffDashboard = await getStaffDashboard(this.token);
         }
+
+        if (this.isUserDashboard) {
+          this.userDashboard = await getUserDashboard(this.token);
+        }
       } catch (error) {
         this.dashboardMessage = {
           type: "error",
@@ -512,6 +641,7 @@ export default {
       this.currentUser = null;
       this.dashboard = null;
       this.staffDashboard = null;
+      this.userDashboard = null;
       this.dashboardMessage = { type: "", text: "" };
 
       if (clearMessage) {
@@ -923,7 +1053,8 @@ body {
   word-break: break-word;
 }
 
-.staff-dashboard-grid {
+.staff-dashboard-grid,
+.user-dashboard-grid {
   grid-template-columns: 1.15fr 0.85fr;
 }
 
