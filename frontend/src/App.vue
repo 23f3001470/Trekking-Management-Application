@@ -324,7 +324,33 @@ body {
 }
 
 .action-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.panel-card {
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: 0 1rem 2.2rem rgba(21, 55, 48, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.panel-card h3 {
+  margin: 0 0 1.25rem 0;
+  color: var(--pine);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.admin-panel {
+  margin-top: 1.25rem;
 }
 
 .action-item {
@@ -426,7 +452,8 @@ body {
 
   .stats-grid,
   .dashboard-grid,
-  .action-list {
+  .action-list,
+  .panel-grid {
     grid-template-columns: 1fr;
   }
 }
