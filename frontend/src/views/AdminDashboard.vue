@@ -164,6 +164,9 @@
 
               <div class="panel-card">
                 <h3>Existing Treks</h3>
+                <div class="mb-3">
+                  <input v-model="trekSearchQuery" @input="searchTreks" type="text" class="form-control glass-input" placeholder="Search treks by name or location..." />
+                </div>
                 <div v-if="treks.length" class="trek-list">
                   <article v-for="trek in treks" :key="trek.id" class="trek-row">
                     <div>
@@ -252,6 +255,9 @@
             <div class="panel-grid">
               <div class="panel-card">
                 <h3>Users</h3>
+                <div class="mb-3">
+                  <input v-model="userSearchQuery" @input="searchUsers" type="text" class="form-control glass-input" placeholder="Search users by name or email..." />
+                </div>
                 <div v-if="users.length" class="trek-list">
                   <article v-for="user in users" :key="user.id" class="trek-row">
                     <div>
@@ -259,13 +265,20 @@
                       <strong>{{ user.name }}</strong>
                       <small>{{ user.role }}</small>
                     </div>
-                    <b>{{ user.is_active ? 'Active' : 'Inactive' }}</b>
+                    <div class="d-flex align-items-center gap-2">
+                      <b>{{ user.is_active ? 'Active' : 'Inactive' }}</b>
+                      <button v-if="user.is_active" type="button" class="btn ghost-button" style="padding: 0.2rem 0.5rem; min-height: 2rem;" @click="toggleUserStatus(user)">Deactivate</button>
+                      <button v-else type="button" class="btn primary-button" style="padding: 0.2rem 0.5rem; min-height: 2rem;" @click="toggleUserStatus(user)">Activate</button>
+                    </div>
                   </article>
                 </div>
                 <div v-else class="empty-panel">No users found.</div>
               </div>
               <div class="panel-card">
                 <h3>Staff</h3>
+                <div class="mb-3">
+                  <input v-model="staffSearchQuery" @input="searchStaff" type="text" class="form-control glass-input" placeholder="Search staff by name or email..." />
+                </div>
                 <div v-if="staffMembers.length" class="trek-list">
                   <article v-for="staff in staffMembers" :key="staff.id" class="trek-row">
                     <div>
@@ -273,7 +286,11 @@
                       <strong>{{ staff.name }}</strong>
                       <small>{{ staff.phone || 'No phone' }}</small>
                     </div>
-                    <b>{{ staff.is_active ? 'Active' : 'Inactive' }}</b>
+                    <div class="d-flex align-items-center gap-2">
+                      <b>{{ staff.is_active ? 'Active' : 'Inactive' }}</b>
+                      <button v-if="staff.is_active" type="button" class="btn ghost-button" style="padding: 0.2rem 0.5rem; min-height: 2rem;" @click="toggleUserStatus(staff)">Deactivate</button>
+                      <button v-else type="button" class="btn primary-button" style="padding: 0.2rem 0.5rem; min-height: 2rem;" @click="toggleUserStatus(staff)">Activate</button>
+                    </div>
                   </article>
                 </div>
                 <div v-else class="empty-panel">No staff found.</div>
@@ -296,6 +313,10 @@ import {
   createAdminStaff,
   assignStaffToTrek,
   getAdminBookings,
+  searchAdminUsers,
+  searchAdminStaff,
+  deactivateAdminUser,
+  activateAdminUser,
 } from "../services/adminApi";
 import { clearStoredSession, getStoredSession } from "../services/session";
 
@@ -334,6 +355,9 @@ export default {
         trekId: null,
         staffId: null,
       },
+      userSearchQuery: "",
+      staffSearchQuery: "",
+      trekSearchQuery: "",
       isLoading: false,
       message: {
         text: "",
@@ -472,6 +496,57 @@ export default {
         this.message = { text: "Trek deleted successfully." };
         await this.loadAllData();
         await this.loadDashboard();
+      } catch (error) {
+        this.message = { text: error.message };
+      }
+    },
+    async searchUsers() {
+      try {
+        if (!this.userSearchQuery.trim()) {
+          const res = await getAdminUsers(this.token, "user");
+          this.users = res.users || [];
+          return;
+        }
+        const res = await searchAdminUsers(this.token, this.userSearchQuery);
+        this.users = res.users || [];
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    async searchStaff() {
+      try {
+        if (!this.staffSearchQuery.trim()) {
+          const res = await getAdminUsers(this.token, "staff");
+          this.staffMembers = res.users || [];
+          return;
+        }
+        const res = await searchAdminStaff(this.token, this.staffSearchQuery);
+        this.staffMembers = res.users || [];
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    async searchTreks() {
+      try {
+        if (!this.trekSearchQuery.trim()) {
+          const res = await getAdminTreks(this.token);
+          this.treks = res.treks || [];
+          return;
+        }
+        const res = await searchAdminTreks(this.token, this.trekSearchQuery);
+        this.treks = res.treks || [];
+      } catch (error) {
+        console.error(error);
+      }
+    },
+    async toggleUserStatus(user) {
+      try {
+        if (user.is_active) {
+          await deactivateAdminUser(this.token, user.id);
+        } else {
+          await activateAdminUser(this.token, user.id);
+        }
+        await this.loadAllData();
       } catch (error) {
         this.message = { text: error.message };
       }

@@ -74,3 +74,11 @@ export function searchAdminStaff(token, query) {
 export function searchAdminTreks(token, query) {
   return request(`/admin/search/treks?q=${encodeURIComponent(query)}`, token);
 }
+
+export function deactivateAdminUser(token, userId) {
+  return request(`/admin/users/${userId}/deactivate`, token, { method: "PUT" });
+}
+
+export function activateAdminUser(token, userId) {
+  return request(`/admin/users/${userId}/activate`, token, { method: "PUT" });
+}
