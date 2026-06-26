@@ -1,38 +1,55 @@
 from celery import shared_task
 from flask_mail import Message
-from models.models import Trek, Booking, BookingStatusEnum, TrekStatusEnum
+from models.models import Trek, Booking, BookingStatusEnum, TrekStatusEnum, User, RoleEnum
 from datetime import date, timedelta
 
 @shared_task(name="tasks.reminders.send_daily_reminders")
 def send_daily_reminders():
-    # Because of our custom FlaskTask, this will run inside app context automatically
     from app import mail
     
     tomorrow = date.today() + timedelta(days=1)
     
-    upcoming_treks = Trek.query.filter(
-        Trek.start_date == tomorrow,
-        Trek.status.in_([TrekStatusEnum.APPROVED, TrekStatusEnum.OPEN, TrekStatusEnum.CLOSED])
-    ).all()
+    users = User.query.filter_by(role=RoleEnum.USER, is_active=True).all()
     
-    count = 0
-    for trek in upcoming_treks:
-        bookings = Booking.query.filter_by(trek_id=trek.id, status=BookingStatusEnum.BOOKED).all()
+    count_reminders = 0
+    count_greetings = 0
+    
+    for user in users:
+        user_bookings = Booking.query.filter_by(user_id=user.id, status=BookingStatusEnum.BOOKED).all()
+        has_trek_tomorrow = False
         
-        for booking in bookings:
-            user = booking.user
-            
+        for booking in user_bookings:
+            trek = booking.trek
+            if trek.start_date == tomorrow and trek.status in [TrekStatusEnum.APPROVED, TrekStatusEnum.OPEN, TrekStatusEnum.CLOSED]:
+                msg = Message(
+                    subject=f"Reminder: Upcoming Trek to {trek.location} Tomorrow!",
+                    recipients=[user.email]
+                )
+                formatted_date = tomorrow.strftime('%d-%m-%Y')
+                msg.body = f"Hello {user.name},\n\nThis is a reminder that your trek '{trek.name}' to {trek.location} is starting tomorrow ({formatted_date}).\n\nPlease ensure you follow all instructions and arrive on time.\n\nBest regards,\nTrekking Management Team"
+                
+                try:
+                    mail.send(msg)
+                    print(f"Sent reminder email to {user.email} for trek {trek.name}")
+                    count_reminders += 1
+                except Exception as e:
+                    print(f"Failed to send email to {user.email}: {e}")
+                    
+                has_trek_tomorrow = True
+                break
+                
+        if not has_trek_tomorrow:
             msg = Message(
-                subject=f"Reminder: Upcoming Trek to {trek.location} Tomorrow!",
+                subject="Ready for your next adventure?",
                 recipients=[user.email]
             )
-            msg.body = f"Hello {user.name},\n\nThis is a reminder that your trek '{trek.name}' to {trek.location} is starting tomorrow ({tomorrow}).\n\nPlease ensure you follow all instructions and arrive on time.\n\nBest regards,\nTrekking Management Team"
+            msg.body = f"Hello {user.name},\n\nWe noticed you don't have any treks starting tomorrow. Why not plan your next adventure?\nCheck out our available upcoming treks and book your slot today!\n\nBest regards,\nTrekking Management Team"
             
             try:
                 mail.send(msg)
-                print(f"Sent reminder email to {user.email} for trek {trek.name}")
-                count += 1
+                print(f"Sent greeting email to {user.email}")
+                count_greetings += 1
             except Exception as e:
-                print(f"Failed to send email to {user.email}: {e}")
+                print(f"Failed to send greeting to {user.email}: {e}")
                 
-    return f"Sent {count} reminders."
+    return f"Sent {count_reminders} reminders and {count_greetings} greetings."

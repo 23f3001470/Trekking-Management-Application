@@ -1,5 +1,7 @@
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 from flask import Flask
 from celery.schedules import crontab
 from celery_app import celery_init_app
@@ -17,7 +19,6 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///trekking.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "trek-app-secret-key")
 
-# Celery Configuration
 app.config.from_mapping(
     CELERY=dict(
         broker_url="amqp://guest:guest@localhost:5672//",
@@ -26,15 +27,14 @@ app.config.from_mapping(
         beat_schedule={
             "daily_reminders": {
                 "task": "tasks.reminders.send_daily_reminders",
-                "schedule": crontab(hour=8, minute=0), # Change hour/minute to test
+                "schedule": crontab(hour=8, minute=0),
             }
         }
     )
 )
 
-# Mail Configuration
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'localhost')
-app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 1025)) # Default to Mailhog or local test server
+app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 1025))
 app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'False').lower() in ['true', '1', 't']
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
@@ -43,7 +43,6 @@ app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'norep
 mail = Mail(app)
 celery = celery_init_app(app)
 
-# Import tasks after celery is initialized to register them
 import tasks.reminders
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(admin_bp, url_prefix="/admin")
