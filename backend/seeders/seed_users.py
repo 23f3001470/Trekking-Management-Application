@@ -7,11 +7,11 @@ from models import db
 def seed_users():
     users = [
         {
-            "email": "admin@trekapp.com",
-            "name": "Amit Sharma",
+            "email": "23f3001470@ds.study.iitm.ac.in",
+            "name": "Admin",
             "phone": "9876543210",
             "role": RoleEnum.ADMIN,
-            "password": "Admin@123",
+            "password": "1234",
         },
         {
             "email": "priya.singh@trekapp.com",

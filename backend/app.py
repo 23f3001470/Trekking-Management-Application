@@ -28,6 +28,10 @@ app.config.from_mapping(
             "daily_reminders": {
                 "task": "tasks.reminders.send_daily_reminders",
                 "schedule": crontab(hour=8, minute=0),
+            },
+            "monthly_report": {
+                "task": "tasks.reports.send_monthly_activity_report",
+                "schedule": crontab(day_of_month="1", hour=8, minute=0),
             }
         }
     )
@@ -44,6 +48,7 @@ mail = Mail(app)
 celery = celery_init_app(app)
 
 import tasks.reminders
+import tasks.reports
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(staff_bp, url_prefix="/staff")
