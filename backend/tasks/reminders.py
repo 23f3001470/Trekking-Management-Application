@@ -7,7 +7,8 @@ from datetime import date, timedelta
 def send_daily_reminders():
     from app import mail
     
-    tomorrow = date.today() + timedelta(days=1)
+    today = date.today()
+    tomorrow = today + timedelta(days=1)
     
     users = User.query.filter_by(role=RoleEnum.USER, is_active=True).all()
     
@@ -16,17 +17,18 @@ def send_daily_reminders():
     
     for user in users:
         user_bookings = Booking.query.filter_by(user_id=user.id, status=BookingStatusEnum.BOOKED).all()
-        has_trek_tomorrow = False
+        has_upcoming_trek = False
         
         for booking in user_bookings:
             trek = booking.trek
-            if trek.start_date == tomorrow and trek.status in [TrekStatusEnum.APPROVED, TrekStatusEnum.OPEN, TrekStatusEnum.CLOSED]:
+            if trek.start_date in [today, tomorrow] and trek.status in [TrekStatusEnum.PENDING, TrekStatusEnum.APPROVED, TrekStatusEnum.OPEN, TrekStatusEnum.CLOSED]:
+                when = "Today" if trek.start_date == today else "Tomorrow"
                 msg = Message(
-                    subject=f"Reminder: Upcoming Trek to {trek.location} Tomorrow!",
+                    subject=f"Reminder: Upcoming Trek to {trek.location} {when}!",
                     recipients=[user.email]
                 )
-                formatted_date = tomorrow.strftime('%d-%m-%Y')
-                msg.body = f"Hello {user.name},\n\nThis is a reminder that your trek '{trek.name}' to {trek.location} is starting tomorrow ({formatted_date}).\n\nPlease ensure you follow all instructions and arrive on time.\n\nBest regards,\nTrekking Management Team"
+                formatted_date = trek.start_date.strftime('%d-%m-%Y')
+                msg.body = f"Hello {user.name},\n\nThis is a reminder that your trek '{trek.name}' to {trek.location} is starting {when.lower()} ({formatted_date}).\n\nPlease ensure you follow all instructions and arrive on time.\n\nBest regards,\nTrekking Management Team"
                 
                 try:
                     mail.send(msg)
@@ -35,15 +37,15 @@ def send_daily_reminders():
                 except Exception as e:
                     print(f"Failed to send email to {user.email}: {e}")
                     
-                has_trek_tomorrow = True
+                has_upcoming_trek = True
                 break
                 
-        if not has_trek_tomorrow:
+        if not has_upcoming_trek:
             msg = Message(
                 subject="Ready for your next adventure?",
                 recipients=[user.email]
             )
-            msg.body = f"Hello {user.name},\n\nWe noticed you don't have any treks starting tomorrow. Why not plan your next adventure?\nCheck out our available upcoming treks and book your slot today!\n\nBest regards,\nTrekking Management Team"
+            msg.body = f"Hello {user.name},\n\nWe noticed you don't have any treks starting today or tomorrow. Why not plan your next adventure?\nCheck out our available upcoming treks and book your slot today!\n\nBest regards,\nTrekking Management Team"
             
             try:
                 mail.send(msg)

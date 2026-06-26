@@ -1,9 +1,12 @@
 const API_BASE_URL = process.env.VUE_APP_API_BASE_URL || "";
 
-async function request(path, token) {
+async function request(path, token, options = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...options,
     headers: {
+      "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
+      ...(options.headers || {}),
     },
   });
 
