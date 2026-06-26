@@ -315,6 +315,7 @@ import {
   getAdminBookings,
   searchAdminUsers,
   searchAdminStaff,
+  searchAdminTreks,
   deactivateAdminUser,
   activateAdminUser,
 } from "../services/adminApi";
