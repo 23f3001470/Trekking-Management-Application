@@ -56,3 +56,7 @@ export function updateProfile(token, payload) {
 export function searchUserTreks(token, query) {
   return request(`/user/treks/search?q=${encodeURIComponent(query)}`, token);
 }
+
+export function exportUserHistory(token) {
+  return request("/user/export", token, { method: "POST" });
+}

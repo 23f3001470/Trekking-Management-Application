@@ -150,7 +150,10 @@
 
           <div v-if="activePanel === 'history'">
             <div class="panel-card">
-              <h3>Trekking History</h3>
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3 class="mb-0">Trekking History</h3>
+                <button type="button" class="btn ghost-button" @click="exportHistory">Export to CSV</button>
+              </div>
               <div v-if="history.length" class="trek-list">
                 <article v-for="booking in history" :key="booking.id || booking.booking_id" class="trek-row">
                   <div>
@@ -201,7 +204,8 @@ import {
   getUserBookings, 
   getUserHistory, 
   updateProfile, 
-  searchUserTreks 
+  searchUserTreks,
+  exportUserHistory
 } from "../services/userApi";
 import { clearStoredSession, getStoredSession, setStoredSession } from "../services/session";
 
@@ -365,6 +369,14 @@ export default {
         
         this.message = { text: "Profile updated successfully." };
         this.profileForm.password = "";
+      } catch (error) {
+        this.message = { text: error.message };
+      }
+    },
+    async exportHistory() {
+      try {
+        const res = await exportUserHistory(this.token);
+        this.message = { text: res.message || "Export started." };
       } catch (error) {
         this.message = { text: error.message };
       }

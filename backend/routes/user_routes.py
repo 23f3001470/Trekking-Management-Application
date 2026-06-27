@@ -160,3 +160,13 @@ def search_treks():
             "slots_remaining": t.slots_remaining(),
         })
     return jsonify({"treks": out})
+
+
+@bp.route("/export", methods=["POST"])
+@token_auth_required
+def export_history():
+    user = g.current_user
+    from tasks.exports import export_history_task
+    export_history_task.delay(user.id)
+    return jsonify({"message": "Export started. You will receive an email shortly with the CSV file attached."})
+
