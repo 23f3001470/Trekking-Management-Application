@@ -35,7 +35,7 @@
               <h2>{{ mode === "login" ? "Sign in" : "Join the trail" }}</h2>
             </div>
 
-            <form @submit.prevent="submitForm" novalidate>
+            <form @submit.prevent="submitForm">
               <div v-if="mode === 'register'" class="mb-3">
                 <label for="name" class="form-label">Full name</label>
                 <input
@@ -45,6 +45,8 @@
                   class="form-control glass-input"
                   placeholder="Aarav Sharma"
                   autocomplete="name"
+                  minlength="3"
+                  maxlength="50"
                   required
                 >
               </div>
@@ -71,6 +73,7 @@
                   class="form-control glass-input"
                   placeholder="Enter your password"
                   :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
+                  minlength="6"
                   required
                 >
               </div>
@@ -84,6 +87,8 @@
                   class="form-control glass-input"
                   placeholder="+91 98765 43210"
                   autocomplete="tel"
+                  pattern="^\+?[0-9\s\-\(\)]+$"
+                  title="Enter a valid phone number"
                 >
               </div>
 

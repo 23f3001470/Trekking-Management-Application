@@ -175,15 +175,15 @@
                 <form @submit.prevent="saveProfile">
                   <div class="mb-3">
                     <label class="form-label">Name</label>
-                    <input v-model="profileForm.name" class="form-control glass-input" required />
+                    <input v-model="profileForm.name" class="form-control glass-input" minlength="3" maxlength="50" required />
                   </div>
                   <div class="mb-3">
                     <label class="form-label">Phone</label>
-                    <input v-model="profileForm.phone" class="form-control glass-input" />
+                    <input v-model="profileForm.phone" type="tel" class="form-control glass-input" pattern="^\+?[0-9\s\-\(\)]+$" title="Enter a valid phone number" />
                   </div>
                   <div class="mb-3">
                     <label class="form-label">New Password (leave blank to keep current)</label>
-                    <input type="password" v-model="profileForm.password" class="form-control glass-input" />
+                    <input type="password" v-model="profileForm.password" class="form-control glass-input" minlength="6" />
                   </div>
                   <button type="submit" class="btn primary-button mt-2">Save Profile</button>
                 </form>

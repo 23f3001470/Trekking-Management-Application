@@ -125,12 +125,12 @@
                 <form @submit.prevent="createTrek">
                   <div class="mb-3">
                     <label class="form-label">Name</label>
-                    <input v-model="newTrek.name" class="form-control glass-input" required />
+                    <input v-model="newTrek.name" class="form-control glass-input" minlength="3" maxlength="100" required />
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label">Location</label>
-                    <input v-model="newTrek.location" class="form-control glass-input" />
+                    <input v-model="newTrek.location" class="form-control glass-input" minlength="3" maxlength="100" required />
                   </div>
 
                   <div class="mb-3">
@@ -144,28 +144,28 @@
 
                   <div class="mb-3">
                     <label class="form-label">Duration (days)</label>
-                    <input type="number" v-model.number="newTrek.duration_days" class="form-control glass-input" min="1" />
+                    <input type="number" v-model.number="newTrek.duration_days" class="form-control glass-input" min="1" required />
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label">Slots</label>
-                    <input type="number" v-model.number="newTrek.available_slots" class="form-control glass-input" min="0" />
+                    <input type="number" v-model.number="newTrek.available_slots" class="form-control glass-input" min="1" required />
                   </div>
 
                   <div class="row">
                     <div class="col-md-6 mb-3">
                       <label class="form-label">Start Date</label>
-                      <input type="date" v-model="newTrek.start_date" class="form-control glass-input" />
+                      <input type="date" v-model="newTrek.start_date" class="form-control glass-input" required />
                     </div>
                     <div class="col-md-6 mb-3">
                       <label class="form-label">End Date</label>
-                      <input type="date" v-model="newTrek.end_date" class="form-control glass-input" />
+                      <input type="date" v-model="newTrek.end_date" class="form-control glass-input" required />
                     </div>
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label">Description</label>
-                    <textarea v-model="newTrek.description" class="form-control glass-input" rows="3"></textarea>
+                    <textarea v-model="newTrek.description" class="form-control glass-input" rows="3" required></textarea>
                   </div>
 
                   <button type="submit" class="btn primary-button mt-2">Create trek</button>
@@ -199,7 +199,7 @@
                 <form @submit.prevent="createStaff">
                   <div class="mb-3">
                     <label class="form-label">Name</label>
-                    <input v-model="newStaff.name" class="form-control glass-input" required />
+                    <input v-model="newStaff.name" class="form-control glass-input" minlength="3" maxlength="50" required />
                   </div>
 
                   <div class="mb-3">
@@ -209,12 +209,12 @@
 
                   <div class="mb-3">
                     <label class="form-label">Phone</label>
-                    <input v-model="newStaff.phone" class="form-control glass-input" />
+                    <input v-model="newStaff.phone" type="tel" class="form-control glass-input" pattern="^\+?[0-9\s\-\(\)]+$" title="Enter a valid phone number" />
                   </div>
 
                   <div class="mb-3">
                     <label class="form-label">Password</label>
-                    <input v-model="newStaff.password" type="password" class="form-control glass-input" required />
+                    <input v-model="newStaff.password" type="password" class="form-control glass-input" minlength="6" required />
                   </div>
 
                   <button type="submit" class="btn primary-button mt-2">Create staff</button>
@@ -225,7 +225,7 @@
                 <h3>Assign Staff to Trek</h3>
                 <div class="mb-3">
                   <label class="form-label">Trek</label>
-                  <select v-model.number="assignForm.trekId" class="form-control glass-input">
+                  <select v-model.number="assignForm.trekId" class="form-control glass-input" required>
                     <option disabled value="">Select trek</option>
                     <option v-for="trek in treks" :key="trek.id" :value="trek.id">{{ trek.name }}</option>
                   </select>
@@ -233,7 +233,7 @@
 
                 <div class="mb-3">
                   <label class="form-label">Staff</label>
-                  <select v-model.number="assignForm.staffId" class="form-control glass-input">
+                  <select v-model.number="assignForm.staffId" class="form-control glass-input" required>
                     <option disabled value="">Select staff</option>
                     <option v-for="member in staffMembers" :key="member.id" :value="member.id">{{ member.name }}</option>
                   </select>
