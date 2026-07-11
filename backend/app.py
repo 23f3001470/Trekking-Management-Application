@@ -13,11 +13,15 @@ from routes.auth_routes import bp as auth_bp
 from routes.admin_routes import bp as admin_bp
 from routes.staff_routes import bp as staff_bp
 from routes.user_routes import bp as user_bp
+from extensions import cache
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///trekking.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "trek-app-secret-key")
+app.config['CACHE_TYPE'] = 'RedisCache'
+app.config['CACHE_REDIS_URL'] = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+app.config['CACHE_DEFAULT_TIMEOUT'] = 300
 
 app.config.from_mapping(
     CELERY=dict(
@@ -44,6 +48,7 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@trekapp.com')
 
+cache.init_app(app)
 mail = Mail(app)
 celery = celery_init_app(app)
 

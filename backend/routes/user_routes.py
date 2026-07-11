@@ -3,6 +3,7 @@ from flask import Blueprint, g, jsonify, request
 from models import db
 from models.models import Booking, BookingStatusEnum, PaymentStatusEnum, RoleEnum, Trek, TrekStatusEnum
 from routes.auth_routes import token_auth_required, user_to_dict, get_request_data
+from extensions import cache
 
 bp = Blueprint("user", __name__)
 
@@ -39,6 +40,7 @@ def dashboard():
 
 
 @bp.route("/treks", methods=["GET"])
+@cache.cached(timeout=300)
 def list_treks():
     treks = Trek.query.order_by(Trek.id.desc()).all()
     out = []
@@ -144,6 +146,7 @@ def edit_profile():
 
 
 @bp.route("/treks/search", methods=["GET"])
+@cache.cached(timeout=300, query_string=True)
 def search_treks():
     q = request.args.get("q", "").strip()
     if not q:
