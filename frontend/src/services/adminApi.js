@@ -24,6 +24,10 @@ export function getAdminDashboard(token) {
   return request("/admin/dashboard", token);
 }
 
+export function getAdminAnalytics(token) {
+  return request("/admin/analytics", token);
+}
+
 export function getAdminTreks(token) {
   return request("/admin/treks", token);
 }

@@ -3,8 +3,11 @@ from datetime import date
 from flask import Blueprint, g, jsonify, request
 
 from models import db
-from models.models import Booking, DifficultyEnum, RoleEnum, Trek, TrekStatusEnum, User
+from models.models import Booking, DifficultyEnum, RoleEnum, Trek, TrekStatusEnum, User, BookingStatusEnum
 from routes.auth_routes import roles_required, token_auth_required, user_to_dict
+from sqlalchemy import func
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 bp = Blueprint("admin", __name__)
 
@@ -71,6 +74,63 @@ def dashboard():
             "total_bookings": total_bookings,
         }
     )
+
+
+@bp.route("/analytics", methods=["GET"])
+@token_auth_required
+@roles_required(RoleEnum.ADMIN)
+def analytics():
+    # Popular Treks (Top 5 most booked treks)
+    popular_treks_query = (
+        db.session.query(Trek.name, func.count(Booking.id).label("booking_count"))
+        .join(Booking, Trek.id == Booking.trek_id)
+        .filter(Booking.status.in_([BookingStatusEnum.BOOKED, BookingStatusEnum.COMPLETED]))
+        .group_by(Trek.id)
+        .order_by(func.count(Booking.id).desc())
+        .limit(5)
+        .all()
+    )
+    popular_treks = [{"name": t[0], "count": t[1]} for t in popular_treks_query]
+
+    # User Participation (Bookings over the last 6 months)
+    # Since standard SQLite grouping by month can be tricky across environments, we can fetch the last 6 months in Python
+    today = datetime.today()
+    six_months_ago = today.replace(day=1)
+    for _ in range(5):
+        if six_months_ago.month == 1:
+            six_months_ago = six_months_ago.replace(year=six_months_ago.year - 1, month=12)
+        else:
+            six_months_ago = six_months_ago.replace(month=six_months_ago.month - 1)
+            
+    recent_bookings = (
+        Booking.query.filter(Booking.booking_date >= six_months_ago)
+        .all()
+    )
+    
+    participation_by_month = {}
+    
+    current = six_months_ago
+    for _ in range(6):
+        month_str = current.strftime("%b %Y")
+        participation_by_month[month_str] = 0
+        if current.month == 12:
+            current = current.replace(year=current.year + 1, month=1)
+        else:
+            current = current.replace(month=current.month + 1)
+
+    for b in recent_bookings:
+        month_str = b.booking_date.strftime("%b %Y")
+        if month_str in participation_by_month:
+            participation_by_month[month_str] += 1
+
+    user_participation = [
+        {"month": k, "count": v} for k, v in participation_by_month.items()
+    ]
+
+    return jsonify({
+        "popular_treks": popular_treks,
+        "user_participation": user_participation
+    })
 
 
 @bp.route("/treks", methods=["GET"])

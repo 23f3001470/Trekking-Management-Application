@@ -76,6 +76,16 @@
                 <strong>Manage accounts</strong>
                 <small>Search and activate/deactivate users.</small>
               </button>
+              <button
+                type="button"
+                class="action-item"
+                :class="{ active: activePanel === 'analytics' }"
+                @click="activePanel = 'analytics'"
+              >
+                <span>Analytics</span>
+                <strong>View insights</strong>
+                <small>See popular treks and user participation.</small>
+              </button>
             </div>
           </section>
 
@@ -296,6 +306,17 @@
                 <div v-else class="empty-panel">No staff found.</div>
               </div>
             </div>
+          <div v-show="activePanel === 'analytics'">
+            <div class="panel-grid">
+              <div class="panel-card">
+                <h3>Popular Treks</h3>
+                <canvas id="popularTreksChart"></canvas>
+              </div>
+              <div class="panel-card">
+                <h3>User Participation</h3>
+                <canvas id="participationChart"></canvas>
+              </div>
+            </div>
           </div>
         </section>
       </div>
@@ -318,8 +339,10 @@ import {
   searchAdminTreks,
   deactivateAdminUser,
   activateAdminUser,
+  getAdminAnalytics,
 } from "../services/adminApi";
 import { clearStoredSession, getStoredSession } from "../services/session";
+import Chart from "chart.js/auto";
 
 export default {
   name: "AdminDashboard",
@@ -334,6 +357,7 @@ export default {
       staffMembers: [],
       users: [],
       bookings: [],
+      analyticsData: null,
       activePanel: "treks",
       newTrek: {
         name: "",
@@ -376,6 +400,8 @@ export default {
           return "Booking overview";
         case "users":
           return "User and staff lists";
+        case "analytics":
+          return "System analytics";
         default:
           return "Admin tools";
       }
@@ -410,6 +436,7 @@ export default {
   mounted() {
     this.loadDashboard();
     this.loadAllData();
+    this.loadAnalytics();
   },
   methods: {
     async loadDashboard() {
@@ -439,6 +466,59 @@ export default {
         this.bookings = bookingsResult.bookings || [];
       } catch (error) {
         this.message = { text: error.message };
+      }
+    },
+    async loadAnalytics() {
+      try {
+        this.analyticsData = await getAdminAnalytics(this.token);
+        this.renderCharts();
+      } catch (error) {
+        console.error("Failed to load analytics", error);
+      }
+    },
+    renderCharts() {
+      if (!this.analyticsData) return;
+      
+      const popularTreksCtx = document.getElementById('popularTreksChart');
+      if (popularTreksCtx) {
+        new Chart(popularTreksCtx, {
+          type: 'bar',
+          data: {
+            labels: this.analyticsData.popular_treks.map(t => t.name),
+            datasets: [{
+              label: 'Bookings',
+              data: this.analyticsData.popular_treks.map(t => t.count),
+              backgroundColor: '#2ecc71',
+              borderRadius: 4
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
+      }
+
+      const participationCtx = document.getElementById('participationChart');
+      if (participationCtx) {
+        new Chart(participationCtx, {
+          type: 'line',
+          data: {
+            labels: this.analyticsData.user_participation.map(p => p.month),
+            datasets: [{
+              label: 'Bookings per Month',
+              data: this.analyticsData.user_participation.map(p => p.count),
+              borderColor: '#3498db',
+              backgroundColor: 'rgba(52, 152, 219, 0.2)',
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+          }
+        });
       }
     },
     async createTrek() {

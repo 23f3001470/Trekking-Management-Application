@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.3",
+    "chart.js": "^4.5.1",
     "core-js": "^3.37.1",
     "vue": "^3.4.29",
     "vue-router": "^4.6.4"
