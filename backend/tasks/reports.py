@@ -3,6 +3,8 @@ from flask_mail import Message
 from models.models import Trek, Booking, BookingStatusEnum, TrekStatusEnum, User, RoleEnum, db
 from datetime import date, timedelta
 from sqlalchemy import func
+import io
+from xhtml2pdf import pisa
 
 @shared_task(name="tasks.reports.send_monthly_activity_report")
 def send_monthly_activity_report():
@@ -42,28 +44,154 @@ def send_monthly_activity_report():
     trek_booking_counts.sort(key=lambda x: x[1], reverse=True)
     top_treks = trek_booking_counts[:3]
 
-    popular_treks_html = "<ul>\n"
+    popular_treks_html = ""
     for t, count in top_treks:
-        popular_treks_html += f"                <li><strong>{t.name}</strong> - {count} bookings</li>\n"
-    popular_treks_html += "            </ul>"
+        popular_treks_html += f"<tr><td>{t.name}</td><td>{t.location}</td><td style='text-align: right;'>{count}</td></tr>\n"
     
     if not top_treks:
-        popular_treks_html = "<p>No treks were booked last month.</p>"
+        popular_treks_html = "<tr><td colspan='3' style='text-align: center;'>No treks were booked last month.</td></tr>"
         
     month_name = first_day_of_last_month.strftime("%B %Y")
         
-    html_content = f"""
+    pdf_html_content = f"""
+    <html>
+        <head>
+            <style>
+                @page {{
+                    size: a4 portrait;
+                    margin: 2cm;
+                }}
+                body {{
+                    font-family: Helvetica, Arial, sans-serif;
+                    color: #333;
+                }}
+                .header {{
+                    text-align: center;
+                    border-bottom: 2px solid #2ecc71;
+                    padding-bottom: 20px;
+                    margin-bottom: 30px;
+                }}
+                .header h1 {{
+                    color: #2c3e50;
+                    margin: 0;
+                    font-size: 28px;
+                }}
+                .header p {{
+                    color: #7f8c8d;
+                    margin: 5px 0 0 0;
+                    font-size: 16px;
+                }}
+                .summary-box {{
+                    background-color: #f8f9fa;
+                    border: 1px solid #e9ecef;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin-bottom: 30px;
+                }}
+                .summary-box h3 {{
+                    margin-top: 0;
+                    color: #2c3e50;
+                    border-bottom: 1px solid #dee2e6;
+                    padding-bottom: 10px;
+                }}
+                .stat-grid {{
+                    width: 100%;
+                }}
+                .stat-grid td {{
+                    width: 50%;
+                    padding: 10px 0;
+                }}
+                .stat-label {{
+                    font-weight: bold;
+                    color: #7f8c8d;
+                    font-size: 14px;
+                }}
+                .stat-value {{
+                    font-size: 24px;
+                    color: #2c3e50;
+                    font-weight: bold;
+                }}
+                table.data-table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                }}
+                table.data-table th, table.data-table td {{
+                    border: 1px solid #dee2e6;
+                    padding: 12px;
+                    text-align: left;
+                }}
+                table.data-table th {{
+                    background-color: #f8f9fa;
+                    color: #495057;
+                    font-weight: bold;
+                }}
+                .footer {{
+                    margin-top: 50px;
+                    text-align: center;
+                    color: #adb5bd;
+                    font-size: 12px;
+                    border-top: 1px solid #dee2e6;
+                    padding-top: 20px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>Trekking Management Application</h1>
+                <p>Monthly Activity Report - {month_name}</p>
+            </div>
+            
+            <div class="summary-box">
+                <h3>Executive Summary</h3>
+                <table class="stat-grid">
+                    <tr>
+                        <td>
+                            <div class="stat-label">Total Treks Conducted</div>
+                            <div class="stat-value">{num_treks_conducted}</div>
+                        </td>
+                        <td>
+                            <div class="stat-label">Unique Participants</div>
+                            <div class="stat-value">{num_users_participated}</div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+            <h3 style="color: #2c3e50; margin-bottom: 15px;">Popular Treks</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Trek Name</th>
+                        <th>Location</th>
+                        <th style="text-align: right;">Bookings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {popular_treks_html}
+                </tbody>
+            </table>
+            
+            <div class="footer">
+                <p>Generated automatically by the Trekking Management Application.</p>
+                <p>&copy; {date.today().year} All rights reserved.</p>
+            </div>
+        </body>
+    </html>
+    """
+    
+    email_html_content = f"""
     <html>
         <body>
             <h2>Monthly Activity Report - {month_name}</h2>
             <p>Hello Admin,</p>
-            <p>Here is the summary of trekking activities for the month of {month_name}:</p>
+            <p>The activity report for {month_name} is ready. We have generated a detailed PDF report for your review.</p>
+            <p><strong>Quick Summary:</strong></p>
             <ul>
-                <li><strong>Number of Treks Conducted:</strong> {num_treks_conducted}</li>
-                <li><strong>Number of Unique Participants:</strong> {num_users_participated}</li>
+                <li>Treks Conducted: {num_treks_conducted}</li>
+                <li>Unique Participants: {num_users_participated}</li>
             </ul>
-            <h3>Popular Treks</h3>
-            {popular_treks_html}
+            <p>Please find the well-designed PDF report attached to this email.</p>
             <br>
             <p>Best regards,</p>
             <p>Trekking Management Team</p>
@@ -77,14 +205,27 @@ def send_monthly_activity_report():
     if not admin_emails:
         return "No admins found to send report."
         
+    # Generate PDF in memory
+    pdf_buffer = io.BytesIO()
+    pisa_status = pisa.CreatePDF(io.StringIO(pdf_html_content), dest=pdf_buffer)
+    
+    if pisa_status.err:
+        return "Failed to generate PDF report."
+        
     msg = Message(
         subject=f"Monthly Activity Report - {month_name}",
         recipients=admin_emails,
-        html=html_content
+        html=email_html_content
+    )
+    
+    msg.attach(
+        f"Monthly_Report_{month_name.replace(' ', '_')}.pdf",
+        "application/pdf",
+        pdf_buffer.getvalue()
     )
     
     try:
         mail.send(msg)
-        return f"Sent monthly report for {month_name} to {len(admin_emails)} admins."
+        return f"Sent monthly PDF report for {month_name} to {len(admin_emails)} admins."
     except Exception as e:
         return f"Failed to send monthly report: {e}"
