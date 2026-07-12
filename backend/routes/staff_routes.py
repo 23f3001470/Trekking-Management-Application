@@ -96,8 +96,17 @@ def update_participant_status(trek_id, booking_id):
         return jsonify({"error": error}), 400
 
     status = payload.get("status")
+    previous_status = booking.status
     booking.status = BookingStatusEnum(status)
     db.session.commit()
+    
+    if booking.status == BookingStatusEnum.CANCELLED and previous_status != BookingStatusEnum.CANCELLED:
+        try:
+            from tasks.notifications import send_booking_cancellation
+            send_booking_cancellation.delay(booking.id)
+        except Exception as e:
+            print(f"Failed to dispatch booking cancellation task: {e}")
+            
     return jsonify({"message": "Booking status updated", "booking": {"id": booking.id, "status": booking.status.value}})
 
 @bp.route("/treks/<int:trek_id>/start", methods=["PUT"])

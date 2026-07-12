@@ -55,6 +55,7 @@ celery = celery_init_app(app)
 import tasks.reminders
 import tasks.reports
 import tasks.exports
+import tasks.notifications
 app.register_blueprint(auth_bp, url_prefix="/auth")
 app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(staff_bp, url_prefix="/staff")

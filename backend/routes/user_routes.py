@@ -75,6 +75,13 @@ def book_trek(trek_id):
     booking.payment_status = PaymentStatusEnum.PENDING
     db.session.add(booking)
     db.session.commit()
+    
+    try:
+        from tasks.notifications import send_booking_confirmation
+        send_booking_confirmation.delay(booking.id)
+    except Exception as e:
+        print(f"Failed to dispatch booking confirmation task: {e}")
+        
     return jsonify({"message": "Trek booked successfully", "booking": {"id": booking.id, "trek_id": trek.id, "status": booking.status.value}}), 201
 
 
