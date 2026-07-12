@@ -86,13 +86,16 @@ def user_to_dict(user):
 @bp.route("/register", methods=["POST"])
 def register():
     payload = get_request_data()
+    
+    from validations.auth_validators import validate_registration
+    is_valid, error = validate_registration(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     email = payload.get("email")
     name = payload.get("name")
     password = payload.get("password")
     phone = payload.get("phone")
-
-    if not email or not name or not password:
-        return jsonify({"error": "Email, name, and password are required"}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "User already exists with this email"}), 400
@@ -115,11 +118,14 @@ def register():
 @bp.route("/login", methods=["POST"])
 def login():
     payload = get_request_data()
+    
+    from validations.auth_validators import validate_login
+    is_valid, error = validate_login(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     email = payload.get("email")
     password = payload.get("password")
-
-    if not email or not password:
-        return jsonify({"error": "Email and password are required"}), 400
 
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):

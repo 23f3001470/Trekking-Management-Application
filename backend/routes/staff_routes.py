@@ -41,6 +41,12 @@ def update_trek(trek_id):
     if trek.assigned_staff_id != staff.id:
         return jsonify({"error": "Not authorized for this trek"}), 403
     payload = get_request_data()
+    
+    from validations.trek_validators import validate_update_trek
+    is_valid, error = validate_update_trek(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     if "available_slots" in payload:
         trek.available_slots = int(payload.get("available_slots") or trek.available_slots)
     if "status" in payload:
@@ -83,9 +89,13 @@ def update_participant_status(trek_id, booking_id):
     if not booking or booking.trek_id != trek.id:
         return jsonify({"error": "Booking not found for this trek"}), 404
     payload = get_request_data()
+    
+    from validations.user_validators import validate_booking_status_update
+    is_valid, error = validate_booking_status_update(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     status = payload.get("status")
-    if not status:
-        return jsonify({"error": "status is required"}), 400
     booking.status = BookingStatusEnum(status)
     db.session.commit()
     return jsonify({"message": "Booking status updated", "booking": {"id": booking.id, "status": booking.status.value}})

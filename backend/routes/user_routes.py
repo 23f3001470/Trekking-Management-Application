@@ -135,6 +135,12 @@ def history():
 def edit_profile():
     user = g.current_user
     payload = get_request_data()
+    
+    from validations.user_validators import validate_profile_update
+    is_valid, error = validate_profile_update(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+        
     if "name" in payload:
         user.name = payload.get("name")
     if "phone" in payload:

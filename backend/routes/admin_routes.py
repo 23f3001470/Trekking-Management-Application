@@ -146,9 +146,13 @@ def list_treks():
 @roles_required(RoleEnum.ADMIN)
 def create_trek():
     payload = get_request_data()
+    
+    from validations.trek_validators import validate_create_trek
+    is_valid, error = validate_create_trek(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     name = payload.get("name")
-    if not name:
-        return jsonify({"error": "Trek name is required"}), 400
 
     difficulty = payload.get("difficulty")
     duration_days = payload.get("duration_days", 1)
@@ -183,6 +187,12 @@ def update_trek(trek_id):
         return jsonify({"error": "Trek not found"}), 404
 
     payload = get_request_data()
+    
+    from validations.trek_validators import validate_update_trek
+    is_valid, error = validate_update_trek(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     if "name" in payload:
         trek.name = payload["name"]
     if "location" in payload:
@@ -226,11 +236,15 @@ def delete_trek(trek_id):
 @roles_required(RoleEnum.ADMIN)
 def create_staff():
     payload = get_request_data()
+    
+    from validations.user_validators import validate_staff_creation
+    is_valid, error = validate_staff_creation(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     email = payload.get("email")
     name = payload.get("name")
     password = payload.get("password")
-    if not email or not name or not password:
-        return jsonify({"error": "Email, name, and password are required"}), 400
 
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already in use"}), 400
@@ -257,9 +271,13 @@ def assign_staff(trek_id):
         return jsonify({"error": "Trek not found"}), 404
 
     payload = get_request_data()
+    
+    from validations.trek_validators import validate_staff_assignment
+    is_valid, error = validate_staff_assignment(payload)
+    if not is_valid:
+        return jsonify({"error": error}), 400
+
     staff_id = payload.get("staff_id")
-    if staff_id is None:
-        return jsonify({"error": "staff_id is required"}), 400
 
     staff = User.query.get(staff_id)
     if not staff or staff.role != RoleEnum.STAFF:
