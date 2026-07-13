@@ -17,10 +17,9 @@ The application serves three distinct roles with their own dedicated dashboards:
 ## Project Structure
 
 ```text
-/
-  start.sh              # Single entry point script to run everything
-  backend/              # Flask API, Celery Workers, SQLite DB, Pytest Suite
-  frontend/             # Vue.js PWA with Bootstrap styling
+start.sh              # Single entry point script to run everything
+backend/              # Flask API, Celery Workers, SQLite DB, Pytest Suite
+frontend/             # Vue.js PWA with Bootstrap styling
 ```
 
 ## Quick Start
@@ -55,12 +54,3 @@ python3 backend/seeders/seeder.py
 ```
 *(Warning: This will drop the existing database and generate a fresh dataset!)*
 
-## Testing
-
-The backend includes a comprehensive `pytest` suite ensuring all validations, state transitions, and background tasks work correctly. To run the test suite:
-
-```bash
-cd backend
-source venv/bin/activate
-pytest tests/ -v
-```
