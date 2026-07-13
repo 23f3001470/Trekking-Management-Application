@@ -1,12 +1,13 @@
 from celery import shared_task
 from flask_mail import Message
 from models.models import Booking, User, Trek
+from models import db
 
 @shared_task(name="tasks.notifications.send_booking_confirmation")
 def send_booking_confirmation(booking_id):
     from app import mail
     
-    booking = Booking.query.get(booking_id)
+    booking = db.session.get(Booking, booking_id)
     if not booking:
         return f"Booking {booking_id} not found."
         
@@ -49,7 +50,7 @@ Trekking Management Team
 def send_booking_cancellation(booking_id):
     from app import mail
     
-    booking = Booking.query.get(booking_id)
+    booking = db.session.get(Booking, booking_id)
     if not booking:
         return f"Booking {booking_id} not found."
         

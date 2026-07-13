@@ -63,9 +63,13 @@ def booking_to_dict(booking):
 @roles_required(RoleEnum.ADMIN)
 def dashboard():
     total_treks = Trek.query.count()
-    total_users = User.query.filter_by(role=RoleEnum.USER).count()
+    # count total users excluding admins
+    total_users = User.query.filter(User.role != RoleEnum.ADMIN).count()
     total_staff = User.query.filter_by(role=RoleEnum.STAFF).count()
-    total_bookings = Booking.query.count()
+    # sum of all remaining slots across all active treks
+    total_slots_available = db.session.query(db.func.sum(Trek.available_slots)).scalar() or 0
+    # count total bookings that are not cancelled
+    total_bookings = Booking.query.filter(Booking.status != BookingStatusEnum.CANCELLED).count()
     return jsonify(
         {
             "total_treks": total_treks,
@@ -147,6 +151,7 @@ def list_treks():
 def create_trek():
     payload = get_request_data()
     
+    # validate input data before creating a new trek
     from validations.trek_validators import validate_create_trek
     is_valid, error = validate_create_trek(payload)
     if not is_valid:
@@ -182,7 +187,7 @@ def create_trek():
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def update_trek(trek_id):
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"error": "Trek not found"}), 404
 
@@ -222,7 +227,7 @@ def update_trek(trek_id):
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def delete_trek(trek_id):
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"error": "Trek not found"}), 404
 
@@ -266,7 +271,7 @@ def create_staff():
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def assign_staff(trek_id):
-    trek = Trek.query.get(trek_id)
+    trek = db.session.get(Trek, trek_id)
     if not trek:
         return jsonify({"error": "Trek not found"}), 404
 
@@ -279,7 +284,7 @@ def assign_staff(trek_id):
 
     staff_id = payload.get("staff_id")
 
-    staff = User.query.get(staff_id)
+    staff = db.session.get(User, staff_id)
     if not staff or staff.role != RoleEnum.STAFF:
         return jsonify({"error": "Staff member not found"}), 404
     if not staff.is_active:
@@ -303,14 +308,12 @@ def list_bookings():
 @roles_required(RoleEnum.ADMIN)
 def list_users():
     role = request.args.get("role")
-    query = User.query
-    if role == "staff":
-        query = query.filter_by(role=RoleEnum.STAFF)
-    elif role == "user":
-        query = query.filter_by(role=RoleEnum.USER)
-    elif role == "admin":
-        query = query.filter_by(role=RoleEnum.ADMIN)
-
+    
+    # filter users by role if specified, otherwise return all users except admins
+    query = User.query.filter(User.role != RoleEnum.ADMIN)
+    if role and role.upper() in [r.name for r in RoleEnum]:
+        query = query.filter(User.role == RoleEnum[role.upper()])
+    
     users = query.order_by(User.id.desc()).all()
     return jsonify({"users": [user_to_dict(u) for u in users]})
 
@@ -319,11 +322,13 @@ def list_users():
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def deactivate_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
+        
+    # prevent admins from deactivating themselves or other admins
     if user.role == RoleEnum.ADMIN:
-        return jsonify({"error": "Admin accounts cannot be deactivated"}), 400
+        return jsonify({"error": "Cannot deactivate an admin user"}), 400
 
     user.is_active = False
     db.session.commit()
@@ -334,7 +339,7 @@ def deactivate_user(user_id):
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def activate_user(user_id):
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
 

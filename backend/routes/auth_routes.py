@@ -31,7 +31,7 @@ def verify_auth_token(token, max_age=3600):
     except BadSignature:
         return None
 
-    return User.query.get(data.get("id"))
+    return db.session.get(User, data.get("id"))
 
 
 def token_auth_required(f):
@@ -45,6 +45,10 @@ def token_auth_required(f):
         user = verify_auth_token(token)
         if not user:
             return jsonify({"error": "Invalid or expired token"}), 401
+        
+        # Block requests if user account was deactivated after logging in
+        if not getattr(user, 'is_active', True):
+            return jsonify({"error": "Your account has been deactivated"}), 403
 
         g.current_user = user
         return f(*args, **kwargs)
@@ -130,6 +134,8 @@ def login():
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
         return jsonify({"error": "Invalid email or password"}), 401
+    if not user.is_active:
+        return jsonify({"error": "Your account has been deactivated"}), 403
 
     token = generate_auth_token(user)
     return jsonify({"message": "Login successful", "token": token, "user": user_to_dict(user)})

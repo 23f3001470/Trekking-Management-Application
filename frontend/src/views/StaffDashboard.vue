@@ -91,11 +91,10 @@
                 <div class="mb-3">
                   <label class="form-label">Status</label>
                   <select v-model="editTrek.status" class="form-control glass-input">
-                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
                     <option value="Open">Open</option>
                     <option value="Closed">Closed</option>
                     <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
                   </select>
                 </div>
                 <button type="submit" class="btn primary-button mt-2">Update Trek</button>
@@ -121,7 +120,6 @@
                   </div>
                   <div>
                     <select class="form-control glass-input" style="min-height: 2rem; padding: 0.2rem 0.5rem;" :value="participant.status" @change="updatePStatus(participant.booking_id, $event.target.value)">
-                      <option value="Pending">Pending</option>
                       <option value="Booked">Booked</option>
                       <option value="Completed">Completed</option>
                       <option value="Cancelled">Cancelled</option>

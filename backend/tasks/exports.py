@@ -3,12 +3,13 @@ import io
 from celery import shared_task
 from flask_mail import Message
 from models.models import Booking, User, BookingStatusEnum
+from models import db
 
 @shared_task(name="tasks.exports.export_history_task")
 def export_history_task(user_id):
     from app import mail
     
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return "User not found"
         
