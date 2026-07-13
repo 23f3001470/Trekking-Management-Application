@@ -178,7 +178,7 @@
                   <input v-model="trekSearchQuery" @input="searchTreks" type="text" class="form-control glass-input" placeholder="Search treks by name or location..." />
                 </div>
                 <div v-if="treks.length" class="trek-list">
-                  <article v-for="trek in treks" :key="trek.id" class="trek-row">
+                  <article v-for="trek in paginatedTreks" :key="trek.id" class="trek-row">
                     <div>
                       <span>{{ trek.location || 'Location pending' }}</span>
                       <strong>{{ trek.name }}</strong>
@@ -186,6 +186,11 @@
                     </div>
                     <button type="button" class="btn ghost-button" @click="deleteTrek(trek.id)">Delete</button>
                   </article>
+                  <div v-if="treks.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                    <button type="button" class="btn ghost-button" :disabled="treksPage === 1" @click="treksPage--">Previous</button>
+                    <small>Page {{ treksPage }} of {{ totalTreksPages }}</small>
+                    <button type="button" class="btn ghost-button" :disabled="treksPage === totalTreksPages" @click="treksPage++">Next</button>
+                  </div>
                 </div>
                 <div v-else class="empty-panel">No treks found.</div>
               </div>
@@ -248,7 +253,7 @@
             <div class="panel-card">
               <h3>Recent Bookings</h3>
               <div v-if="bookings.length" class="trek-list">
-                <article v-for="booking in bookings" :key="booking.id" class="trek-row">
+                <article v-for="booking in paginatedBookings" :key="booking.id" class="trek-row">
                   <div>
                     <span>{{ booking.trek?.name || 'Unknown trek' }}</span>
                     <strong>{{ booking.user?.name || 'Unknown user' }}</strong>
@@ -256,6 +261,11 @@
                   </div>
                   <b>{{ booking.booking_date }}</b>
                 </article>
+                <div v-if="bookings.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                  <button type="button" class="btn ghost-button" :disabled="bookingsPage === 1" @click="bookingsPage--">Previous</button>
+                  <small>Page {{ bookingsPage }} of {{ totalBookingsPages }}</small>
+                  <button type="button" class="btn ghost-button" :disabled="bookingsPage === totalBookingsPages" @click="bookingsPage++">Next</button>
+                </div>
               </div>
               <div v-else class="empty-panel">No bookings available.</div>
             </div>
@@ -269,7 +279,7 @@
                   <input v-model="userSearchQuery" @input="searchUsers" type="text" class="form-control glass-input" placeholder="Search users by name or email..." />
                 </div>
                 <div v-if="users.length" class="trek-list">
-                  <article v-for="user in users" :key="user.id" class="trek-row">
+                  <article v-for="user in paginatedUsers" :key="user.id" class="trek-row">
                     <div>
                       <span>{{ user.email }}</span>
                       <strong>{{ user.name }}</strong>
@@ -281,6 +291,11 @@
                       <button v-else type="button" class="btn primary-button" style="padding: 0.2rem 0.5rem; min-height: 2rem;" @click="toggleUserStatus(user)">Activate</button>
                     </div>
                   </article>
+                  <div v-if="users.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                    <button type="button" class="btn ghost-button" :disabled="usersPage === 1" @click="usersPage--">Previous</button>
+                    <small>Page {{ usersPage }} of {{ totalUsersPages }}</small>
+                    <button type="button" class="btn ghost-button" :disabled="usersPage === totalUsersPages" @click="usersPage++">Next</button>
+                  </div>
                 </div>
                 <div v-else class="empty-panel">No users found.</div>
               </div>
@@ -290,7 +305,7 @@
                   <input v-model="staffSearchQuery" @input="searchStaff" type="text" class="form-control glass-input" placeholder="Search staff by name or email..." />
                 </div>
                 <div v-if="staffMembers.length" class="trek-list">
-                  <article v-for="staff in staffMembers" :key="staff.id" class="trek-row">
+                  <article v-for="staff in paginatedStaff" :key="staff.id" class="trek-row">
                     <div>
                       <span>{{ staff.email }}</span>
                       <strong>{{ staff.name }}</strong>
@@ -302,6 +317,11 @@
                       <button v-else type="button" class="btn primary-button" style="padding: 0.2rem 0.5rem; min-height: 2rem;" @click="toggleUserStatus(staff)">Activate</button>
                     </div>
                   </article>
+                  <div v-if="staffMembers.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                    <button type="button" class="btn ghost-button" :disabled="staffPage === 1" @click="staffPage--">Previous</button>
+                    <small>Page {{ staffPage }} of {{ totalStaffPages }}</small>
+                    <button type="button" class="btn ghost-button" :disabled="staffPage === totalStaffPages" @click="staffPage++">Next</button>
+                  </div>
                 </div>
                 <div v-else class="empty-panel">No staff found.</div>
               </div>
@@ -361,6 +381,11 @@ export default {
       bookings: [],
       analyticsData: null,
       activePanel: "treks",
+      pageSize: 5,
+      treksPage: 1,
+      staffPage: 1,
+      usersPage: 1,
+      bookingsPage: 1,
       newTrek: {
         name: "",
         location: "",
@@ -392,6 +417,34 @@ export default {
     };
   },
   computed: {
+    paginatedTreks() {
+      const start = (this.treksPage - 1) * this.pageSize;
+      return this.treks.slice(start, start + this.pageSize);
+    },
+    totalTreksPages() {
+      return Math.ceil(this.treks.length / this.pageSize) || 1;
+    },
+    paginatedStaff() {
+      const start = (this.staffPage - 1) * this.pageSize;
+      return this.staffMembers.slice(start, start + this.pageSize);
+    },
+    totalStaffPages() {
+      return Math.ceil(this.staffMembers.length / this.pageSize) || 1;
+    },
+    paginatedUsers() {
+      const start = (this.usersPage - 1) * this.pageSize;
+      return this.users.slice(start, start + this.pageSize);
+    },
+    totalUsersPages() {
+      return Math.ceil(this.users.length / this.pageSize) || 1;
+    },
+    paginatedBookings() {
+      const start = (this.bookingsPage - 1) * this.pageSize;
+      return this.bookings.slice(start, start + this.pageSize);
+    },
+    totalBookingsPages() {
+      return Math.ceil(this.bookings.length / this.pageSize) || 1;
+    },
     panelTitle() {
       switch (this.activePanel) {
         case "treks":
@@ -584,6 +637,7 @@ export default {
       }
     },
     async searchUsers() {
+      this.usersPage = 1;
       try {
         if (!this.userSearchQuery.trim()) {
           const res = await getAdminUsers(this.token, "user");
@@ -597,6 +651,7 @@ export default {
       }
     },
     async searchStaff() {
+      this.staffPage = 1;
       try {
         if (!this.staffSearchQuery.trim()) {
           const res = await getAdminUsers(this.token, "staff");
@@ -610,6 +665,7 @@ export default {
       }
     },
     async searchTreks() {
+      this.treksPage = 1;
       try {
         if (!this.trekSearchQuery.trim()) {
           const res = await getAdminTreks(this.token);

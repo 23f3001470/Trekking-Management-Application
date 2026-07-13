@@ -115,7 +115,7 @@
                 <input v-model="trekSearchQuery" @input="searchTreks" type="text" class="form-control glass-input" placeholder="Search treks by name or location..." />
               </div>
               <div v-if="availableTreks.length" class="trek-list">
-                <article v-for="trek in availableTreks" :key="trek.id" class="trek-row">
+                <article v-for="trek in paginatedAvailableTreks" :key="trek.id" class="trek-row">
                   <div>
                     <span>{{ trek.location }}</span>
                     <strong>{{ trek.name }}</strong>
@@ -126,6 +126,11 @@
                     <button type="button" class="btn primary-button" style="padding: 0.2rem 0.5rem; min-height: 2rem;" @click="bookTrek(trek.id)">Book</button>
                   </div>
                 </article>
+                <div v-if="availableTreks.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                  <button type="button" class="btn ghost-button" :disabled="treksPage === 1" @click="treksPage--">Previous</button>
+                  <small>Page {{ treksPage }} of {{ totalTreksPages }}</small>
+                  <button type="button" class="btn ghost-button" :disabled="treksPage === totalTreksPages" @click="treksPage++">Next</button>
+                </div>
               </div>
               <div v-else class="empty-panel">No treks available right now.</div>
             </div>
@@ -135,7 +140,7 @@
             <div class="panel-card">
               <h3>My Bookings</h3>
               <div v-if="myBookingsList.length" class="trek-list">
-                <article v-for="booking in myBookingsList" :key="booking.id || booking.booking_id" class="trek-row">
+                <article v-for="booking in paginatedMyBookings" :key="booking.id || booking.booking_id" class="trek-row">
                   <div>
                     <span>{{ booking.trek?.location || booking.location || "Location pending" }}</span>
                     <strong>{{ booking.trek?.name || booking.name || "Trek booking" }}</strong>
@@ -143,6 +148,11 @@
                   </div>
                   <b>{{ booking.status || "Pending" }}</b>
                 </article>
+                <div v-if="myBookingsList.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                  <button type="button" class="btn ghost-button" :disabled="bookingsPage === 1" @click="bookingsPage--">Previous</button>
+                  <small>Page {{ bookingsPage }} of {{ totalBookingsPages }}</small>
+                  <button type="button" class="btn ghost-button" :disabled="bookingsPage === totalBookingsPages" @click="bookingsPage++">Next</button>
+                </div>
               </div>
               <div v-else class="empty-panel">No active bookings yet.</div>
             </div>
@@ -155,7 +165,7 @@
                 <button type="button" class="btn ghost-button" @click="exportHistory">Export to CSV</button>
               </div>
               <div v-if="history.length" class="trek-list">
-                <article v-for="booking in history" :key="booking.id || booking.booking_id" class="trek-row">
+                <article v-for="booking in paginatedHistory" :key="booking.id || booking.booking_id" class="trek-row">
                   <div>
                     <span>{{ booking.trek?.location || booking.location || "Location pending" }}</span>
                     <strong>{{ booking.trek?.name || booking.name || "Trek booking" }}</strong>
@@ -163,6 +173,11 @@
                   </div>
                   <b>{{ booking.status }}</b>
                 </article>
+                <div v-if="history.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                  <button type="button" class="btn ghost-button" :disabled="historyPage === 1" @click="historyPage--">Previous</button>
+                  <small>Page {{ historyPage }} of {{ totalHistoryPages }}</small>
+                  <button type="button" class="btn ghost-button" :disabled="historyPage === totalHistoryPages" @click="historyPage++">Next</button>
+                </div>
               </div>
               <div v-else class="empty-panel">No completed treks yet.</div>
             </div>
@@ -223,6 +238,10 @@ export default {
       myBookingsList: [],
       history: [],
       trekSearchQuery: "",
+      pageSize: 5,
+      treksPage: 1,
+      bookingsPage: 1,
+      historyPage: 1,
       profileForm: {
         name: session.user?.name || "",
         phone: session.user?.phone || "",
@@ -248,6 +267,27 @@ export default {
         default:
           return "User Space";
       }
+    },
+    paginatedAvailableTreks() {
+      const start = (this.treksPage - 1) * this.pageSize;
+      return this.availableTreks.slice(start, start + this.pageSize);
+    },
+    totalTreksPages() {
+      return Math.ceil(this.availableTreks.length / this.pageSize) || 1;
+    },
+    paginatedMyBookings() {
+      const start = (this.bookingsPage - 1) * this.pageSize;
+      return this.myBookingsList.slice(start, start + this.pageSize);
+    },
+    totalBookingsPages() {
+      return Math.ceil(this.myBookingsList.length / this.pageSize) || 1;
+    },
+    paginatedHistory() {
+      const start = (this.historyPage - 1) * this.pageSize;
+      return this.history.slice(start, start + this.pageSize);
+    },
+    totalHistoryPages() {
+      return Math.ceil(this.history.length / this.pageSize) || 1;
     },
     bookings() {
       return (
@@ -327,6 +367,7 @@ export default {
       }
     },
     async searchTreks() {
+      this.treksPage = 1;
       try {
         if (!this.trekSearchQuery.trim()) {
           const res = await getUserTreks(this.token);

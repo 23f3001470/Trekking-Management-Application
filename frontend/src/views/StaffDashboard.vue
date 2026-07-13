@@ -36,7 +36,7 @@
             </div>
 
             <div v-if="assignedTreks.length" class="trek-list">
-              <article v-for="trek in assignedTreks" :key="trek.id" class="trek-row" style="cursor: pointer;" @click="selectTrek(trek)">
+              <article v-for="trek in paginatedAssignedTreks" :key="trek.id" class="trek-row" style="cursor: pointer;" @click="selectTrek(trek)">
                 <div>
                   <span>{{ trek.location || "Location pending" }}</span>
                   <strong>{{ trek.name }}</strong>
@@ -44,6 +44,11 @@
                 </div>
                 <b>{{ trek.status || "Pending" }}</b>
               </article>
+              <div v-if="assignedTreks.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                <button type="button" class="btn ghost-button" :disabled="assignedTreksPage === 1" @click="assignedTreksPage--">Previous</button>
+                <small>Page {{ assignedTreksPage }} of {{ totalAssignedTreksPages }}</small>
+                <button type="button" class="btn ghost-button" :disabled="assignedTreksPage === totalAssignedTreksPages" @click="assignedTreksPage++">Next</button>
+              </div>
             </div>
 
             <div v-else class="empty-panel">
@@ -112,7 +117,7 @@
             <div class="panel-card">
               <h3>Participants</h3>
               <div v-if="participants.length" class="trek-list">
-                <article v-for="participant in participants" :key="participant.booking_id" class="trek-row">
+                <article v-for="participant in paginatedParticipants" :key="participant.booking_id" class="trek-row">
                   <div>
                     <span>{{ participant.user?.email || 'Unknown email' }}</span>
                     <strong>{{ participant.user?.name || 'Unknown user' }}</strong>
@@ -126,6 +131,11 @@
                     </select>
                   </div>
                 </article>
+                <div v-if="participants.length > pageSize" class="d-flex justify-content-between align-items-center mt-3">
+                  <button type="button" class="btn ghost-button" :disabled="participantsPage === 1" @click="participantsPage--">Previous</button>
+                  <small>Page {{ participantsPage }} of {{ totalParticipantsPages }}</small>
+                  <button type="button" class="btn ghost-button" :disabled="participantsPage === totalParticipantsPages" @click="participantsPage++">Next</button>
+                </div>
               </div>
               <div v-else class="empty-panel">No participants yet.</div>
             </div>
@@ -158,6 +168,9 @@ export default {
       dashboard: null,
       selectedTrek: null,
       participants: [],
+      pageSize: 5,
+      assignedTreksPage: 1,
+      participantsPage: 1,
       editTrek: {
         available_slots: 0,
         status: "",
@@ -169,6 +182,20 @@ export default {
     };
   },
   computed: {
+    paginatedAssignedTreks() {
+      const start = (this.assignedTreksPage - 1) * this.pageSize;
+      return this.assignedTreks.slice(start, start + this.pageSize);
+    },
+    totalAssignedTreksPages() {
+      return Math.ceil(this.assignedTreks.length / this.pageSize) || 1;
+    },
+    paginatedParticipants() {
+      const start = (this.participantsPage - 1) * this.pageSize;
+      return this.participants.slice(start, start + this.pageSize);
+    },
+    totalParticipantsPages() {
+      return Math.ceil(this.participants.length / this.pageSize) || 1;
+    },
     assignedTreks() {
       return this.dashboard?.assigned_treks || [];
     },
@@ -228,6 +255,7 @@ export default {
     },
     async selectTrek(trek) {
       this.selectedTrek = trek;
+      this.participantsPage = 1;
       this.editTrek = {
         available_slots: trek.available_slots,
         status: trek.status,
