@@ -14,7 +14,7 @@ def export_history_task(user_id):
         
     bookings = Booking.query.filter_by(user_id=user.id).all()
     
-    # Filter for past bookings: Completed or Cancelled (as defined in user history endpoint)
+    # filter past bookings
     past_bookings = [b for b in bookings if b.status in [BookingStatusEnum.COMPLETED, BookingStatusEnum.CANCELLED]]
     
     output = io.StringIO()

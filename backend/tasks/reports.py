@@ -205,7 +205,7 @@ def send_monthly_activity_report():
     if not admin_emails:
         return "No admins found to send report."
         
-    # Generate PDF in memory
+    # generate pdf
     pdf_buffer = io.BytesIO()
     pisa_status = pisa.CreatePDF(io.StringIO(pdf_html_content), dest=pdf_buffer)
     

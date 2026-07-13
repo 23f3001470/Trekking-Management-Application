@@ -12,7 +12,7 @@ def validate_profile_update(payload):
 
     phone = payload.get("phone")
     if phone is not None:
-        # Simple regex for digits, +, -, spaces and ()
+        # basic phone regex
         if not re.match(r"^[\d\+\-\s()]*$", phone):
             return False, "Invalid phone number format"
 

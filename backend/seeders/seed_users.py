@@ -11,7 +11,7 @@ def seed_users():
             "name": "Admin",
             "phone": "9876543210",
             "role": RoleEnum.ADMIN,
-            "password": "1234",
+            "password": "password",
         },
         {
             "email": "priya.singh@trekapp.com",

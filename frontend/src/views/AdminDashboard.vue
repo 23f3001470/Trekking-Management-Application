@@ -306,6 +306,8 @@
                 <div v-else class="empty-panel">No staff found.</div>
               </div>
             </div>
+          </div>
+          
           <div v-show="activePanel === 'analytics'">
             <div class="panel-grid">
               <div class="panel-card">

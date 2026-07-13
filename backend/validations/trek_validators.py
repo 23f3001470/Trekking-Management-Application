@@ -55,7 +55,7 @@ def validate_create_trek(payload):
     return True, None
 
 def validate_update_trek(payload):
-    # For update, all fields are optional but must be valid if provided
+    # validate update payload
     difficulty = payload.get("difficulty")
     if difficulty:
         try:

@@ -80,7 +80,7 @@ def dashboard():
 @token_auth_required
 @roles_required(RoleEnum.ADMIN)
 def analytics():
-    # Popular Treks (Top 5 most booked treks)
+    # top 5 treks
     popular_treks_query = (
         db.session.query(Trek.name, func.count(Booking.id).label("booking_count"))
         .join(Booking, Trek.id == Booking.trek_id)
@@ -92,8 +92,8 @@ def analytics():
     )
     popular_treks = [{"name": t[0], "count": t[1]} for t in popular_treks_query]
 
-    # User Participation (Bookings over the last 6 months)
-    # Since standard SQLite grouping by month can be tricky across environments, we can fetch the last 6 months in Python
+    # last 6mo stats
+    # fallback to py-based agg for sqlite
     today = datetime.today()
     six_months_ago = today.replace(day=1)
     for _ in range(5):
